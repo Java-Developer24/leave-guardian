@@ -48,7 +48,7 @@ export default function AgentHome() {
   const swapTransfer = myLeaves.filter(l => l.type === 'Transfer' || l.type === 'Swap').length;
 
   const pendingRequests = myLeaves.filter(l => ['PendingSupervisor', 'PendingPeer'].includes(l.status));
-  const recentHistory = myLeaves.filter(l => l.status === 'Approved' || l.status === 'Rejected').slice(0, 8);
+  const recentHistory = myLeaves.filter(l => l.status === 'Approved' || l.status === 'Rejected').slice(0, 12);
   const getUserName = (id: string) => users.find(u => u.id === id)?.name ?? id;
 
   const currentMonth = new Date().getMonth();
@@ -109,7 +109,7 @@ export default function AgentHome() {
             </div>
           ) : (
             <div className="divide-y divide-border/10">
-              {pendingRequests.slice(0, 6).map((l, i) => (
+              {pendingRequests.slice(0, 10).map((l, i) => (
                 <motion.div key={l.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
                   className="flex items-center justify-between px-6 py-3.5 table-row-hover"
                 >
