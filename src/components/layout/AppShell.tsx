@@ -4,9 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, FileText, Calendar, ArrowLeftRight, CheckSquare, Users,
   Upload, Settings, BarChart3, LogOut, Menu, Search, Bell, ChevronLeft,
-  ChevronDown, Sparkles, X
+  ChevronDown, Sparkles, X, Power
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 const navSections: Record<string, { label: string; items: { to: string; label: string; icon: typeof Home }[] }[]> = {
   agent: [
@@ -73,6 +73,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu on outside click
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [userMenuOpen]);
 
   if (!currentUser || location.pathname === '/' || location.pathname === '/login') return <>{children}</>;
 
@@ -140,7 +153,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         ))}
       </nav>
 
-      {/* Bottom */}
+      {/* Bottom — Sign Out button always visible */}
       <div className="p-3 mt-auto">
         <div className="border-t border-border/20 pt-4 space-y-3">
           {!collapsed && (
@@ -154,6 +167,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </div>
             </div>
           )}
+
+          {/* SIGN OUT BUTTON — always visible in sidebar */}
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] text-destructive/80 hover:text-destructive hover:bg-destructive/8 rounded-xl transition-all duration-200 font-medium group"
+          >
+            <Power size={16} className="group-hover:animate-pulse" />
+            {!collapsed && <span>Sign Out</span>}
+          </button>
+
           <button
             onClick={() => setCollapsed(!collapsed)}
             className="hidden lg:flex items-center gap-2 px-3.5 py-2 text-[11px] text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors w-full rounded-lg hover:bg-card/30"
@@ -227,7 +250,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <span className="notification-dot" />
             </button>
             <div className="w-px h-8 bg-border/20 mx-2" />
-            <div className="relative">
+            <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                 className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-card/50 transition-colors"
@@ -246,7 +269,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -6, scale: 0.96 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-full mt-2 w-60 bg-card/95 backdrop-blur-2xl border border-border/40 rounded-2xl shadow-2xl p-2 z-50"
+                    className="absolute right-0 top-full mt-2 w-60 bg-card/98 backdrop-blur-2xl border border-border/40 rounded-2xl shadow-2xl p-2"
+                    style={{ zIndex: 9999 }}
                   >
                     <div className="px-3 py-3 border-b border-border/20 mb-1">
                       <div className="text-sm font-semibold">{currentUser.name}</div>
@@ -257,7 +281,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     </div>
                     <button
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-destructive hover:bg-destructive/8 rounded-xl transition-colors font-medium"
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-destructive hover:bg-destructive/8 rounded-xl transition-colors font-medium cursor-pointer"
                     >
                       <LogOut size={15} /> Sign Out
                     </button>
@@ -272,8 +296,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
-
-      {userMenuOpen && <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />}
     </div>
   );
 }
