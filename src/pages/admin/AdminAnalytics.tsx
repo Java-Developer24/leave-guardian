@@ -167,7 +167,7 @@ export default function AdminAnalytics() {
       <SectionHeader tag="Analytics Dashboard" title="Performance" highlight="Insights" description={`Enterprise analytics across ${departments.length} departments, ${totalAgents} agents, and ${totalLeaves} leave requests.`} />
 
       {/* ═══ Filter Toolbar ═══ */}
-      <div className="glass-card p-4 mb-6 flex flex-col md:flex-row items-start md:items-center gap-3">
+      <div className="glass-card-featured p-5 mb-6 flex flex-col md:flex-row items-start md:items-center gap-4">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-primary/8 flex items-center justify-center border border-primary/10">
             <Filter size={15} className="text-primary" />
