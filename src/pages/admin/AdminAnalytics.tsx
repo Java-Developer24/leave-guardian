@@ -3,6 +3,7 @@ import { pageTransition, staggerContainer, staggerItem } from '@/styles/motion';
 import SectionHeader from '@/components/SectionHeader';
 import KpiCard from '@/components/kpis/KpiCard';
 import { BarChart3, TrendingUp, Calendar, Users, Activity, PieChart } from 'lucide-react';
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadialBarChart, RadialBar } from 'recharts';
 
 const monthlyData = [
   { month: 'Jan', planned: 8, actual: 9, shrinkage: 7.2 },
@@ -21,130 +22,87 @@ const riskDates = [
   { date: '2026-05-01', shrinkage: 14.2, requests: 6 },
 ];
 
-const deptBreakdown = [
-  { dept: 'Customer Care', leaves: 24, shrinkage: 8.4, agents: 5 },
-  { dept: 'Technical Support', leaves: 18, shrinkage: 7.1, agents: 2 },
+const deptData = [
+  { name: 'Customer Care', leaves: 24, shrinkage: 8.4, fill: 'hsl(356, 98%, 62%)' },
+  { name: 'Tech Support', leaves: 18, shrinkage: 7.1, fill: 'hsl(37, 100%, 58%)' },
 ];
+
+const gaugeData = [{ name: 'Shrinkage', value: 79, fill: 'url(#gaugeGrad)' }];
 
 export default function AdminAnalytics() {
   return (
     <motion.div {...pageTransition}>
-      <SectionHeader
-        tag="ANALYTICS DASHBOARD"
-        title="Performance"
-        highlight="Insights"
-        description="Deep-dive analytics across leave metrics, shrinkage trends, and departmental performance."
-      />
+      <SectionHeader tag="ANALYTICS DASHBOARD" title="Performance" highlight="Insights" description="Deep-dive analytics across leave metrics, shrinkage trends, and departmental performance." />
 
-      {/* KPIs */}
-      <motion.div {...staggerContainer} initial="initial" animate="animate" className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
-        <motion.div variants={staggerItem}><KpiCard label="Total Leaves" value={51} icon={<Calendar size={20} />} accent="primary" trend={{ value: '+12%', direction: 'up' }} /></motion.div>
-        <motion.div variants={staggerItem}><KpiCard label="Approval Rate" value="87%" icon={<TrendingUp size={20} />} accent="success" /></motion.div>
-        <motion.div variants={staggerItem}><KpiCard label="Avg Shrinkage" value="7.9%" icon={<Activity size={20} />} accent="warning" trend={{ value: '-0.3%', direction: 'down' }} /></motion.div>
+      <motion.div {...staggerContainer} initial="initial" animate="animate" className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <motion.div variants={staggerItem}><KpiCard label="Total Leaves" value={51} icon={<Calendar size={20} />} accent="primary" trend={{ value: '+12%', direction: 'up' }} sparkline={[30, 35, 42, 38, 45, 51]} /></motion.div>
+        <motion.div variants={staggerItem}><KpiCard label="Approval Rate" value="87%" icon={<TrendingUp size={20} />} accent="success" sparkline={[70, 75, 80, 82, 85, 87]} /></motion.div>
+        <motion.div variants={staggerItem}><KpiCard label="Avg Shrinkage" value="7.9%" icon={<Activity size={20} />} accent="warning" trend={{ value: '-0.3%', direction: 'down' }} sparkline={[9, 8.5, 8.2, 8, 7.9]} /></motion.div>
         <motion.div variants={staggerItem}><KpiCard label="Active Agents" value={7} icon={<Users size={20} />} accent="info" /></motion.div>
-        <motion.div variants={staggerItem}><KpiCard label="High Risk Days" value={5} icon={<BarChart3 size={20} />} accent="primary" trend={{ value: 'Next 60d', direction: 'neutral' }} /></motion.div>
-        <motion.div variants={staggerItem}><KpiCard label="Departments" value={2} icon={<PieChart size={20} />} accent="accent" /></motion.div>
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Planned vs Actual Chart */}
+        {/* Area Chart */}
         <div className="glass-card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-bold tracking-heading">Planned vs Actual Leaves</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">6-month comparison</p>
-            </div>
-            <div className="flex items-center gap-3 text-[10px]">
-              <span className="flex items-center gap-1"><span className="w-3 h-1.5 rounded-full bg-primary" /> Planned</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-1.5 rounded-full bg-accent" /> Actual</span>
-            </div>
-          </div>
-          <div className="space-y-3">
-            {monthlyData.map(d => (
-              <div key={d.month} className="space-y-1.5">
-                <div className="flex justify-between text-xs">
-                  <span className="font-medium w-8">{d.month}</span>
-                  <span className="text-muted-foreground">P:{d.planned} A:{d.actual} | {d.shrinkage}%</span>
-                </div>
-                <div className="h-4 bg-secondary/30 rounded-full overflow-hidden flex relative">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${(d.planned / 15) * 100}%` }}
-                    transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] as const }}
-                    className="h-full bg-primary/50 rounded-l-full"
-                  />
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${(Math.max(0, d.actual - d.planned) / 15) * 100}%` }}
-                    transition={{ duration: 0.6, delay: 0.1, ease: [0.25, 0.1, 0.25, 1] as const }}
-                    className="h-full bg-accent/50"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+          <h3 className="font-bold tracking-heading mb-1">Planned vs Actual Leaves</h3>
+          <p className="text-[11px] text-muted-foreground mb-4">6-month trend comparison</p>
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={monthlyData}>
+              <defs>
+                <linearGradient id="colorPlanned" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(356, 98%, 62%)" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="hsl(356, 98%, 62%)" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(37, 100%, 58%)" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="hsl(37, 100%, 58%)" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsla(220,10%,18%,0.5)" />
+              <XAxis dataKey="month" tick={{ fill: 'hsl(220,8%,50%)', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: 'hsl(220,8%,50%)', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ background: 'hsl(220,13%,10%)', border: '1px solid hsl(220,10%,14%)', borderRadius: 12, fontSize: 12 }} />
+              <Area type="monotone" dataKey="planned" stroke="hsl(356, 98%, 62%)" fillOpacity={1} fill="url(#colorPlanned)" strokeWidth={2} />
+              <Area type="monotone" dataKey="actual" stroke="hsl(37, 100%, 58%)" fillOpacity={1} fill="url(#colorActual)" strokeWidth={2} />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
 
-        {/* High-Risk Dates */}
+        {/* Bar Chart - Risk Dates */}
         <div className="glass-card p-6">
-          <div className="mb-4">
-            <h3 className="font-bold tracking-heading">High-Risk Dates</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Upcoming dates with shrinkage near or above cap</p>
-          </div>
-          <div className="space-y-2">
-            {riskDates.map(d => {
-              const pct = Math.min(100, (d.shrinkage / 15) * 100);
-              const isOver = d.shrinkage > 10;
-              return (
-                <div key={d.date} className="p-3 bg-secondary/30 rounded-lg border border-border/30 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold">{d.date}</span>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${isOver ? 'bg-destructive/15 text-destructive' : 'bg-warning/15 text-warning'}`}>
-                        {d.shrinkage}%
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">{d.requests} req</span>
-                    </div>
-                  </div>
-                  <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${pct}%` }}
-                      transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] as const }}
-                      className={`h-full rounded-full ${isOver ? 'bg-destructive/60' : 'bg-warning/60'}`}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <h3 className="font-bold tracking-heading mb-1">High-Risk Dates</h3>
+          <p className="text-[11px] text-muted-foreground mb-4">Shrinkage % on upcoming dates</p>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={riskDates}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsla(220,10%,18%,0.5)" />
+              <XAxis dataKey="date" tick={{ fill: 'hsl(220,8%,50%)', fontSize: 9 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: 'hsl(220,8%,50%)', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ background: 'hsl(220,13%,10%)', border: '1px solid hsl(220,10%,14%)', borderRadius: 12, fontSize: 12 }} />
+              <Bar dataKey="shrinkage" radius={[6, 6, 0, 0]} fill="hsl(356, 98%, 62%)" fillOpacity={0.7} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
       {/* Department Breakdown */}
-      <div className="glass-card p-6">
-        <div className="mb-4">
-          <h3 className="font-bold tracking-heading">Department Breakdown</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">Leave and shrinkage metrics per department</p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-secondary/20">
-                {['Department', 'Agents', 'Total Leaves', 'Avg Shrinkage', 'Status'].map(h => (
-                  <th key={h} className="text-left p-3.5 text-[10px] tracking-section uppercase text-muted-foreground font-semibold">{h}</th>
-                ))}
-              </tr>
-            </thead>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 glass-card p-6">
+          <h3 className="font-bold tracking-heading mb-1">Department Breakdown</h3>
+          <p className="text-[11px] text-muted-foreground mb-4">Leave and shrinkage per department</p>
+          <table className="w-full text-sm premium-table">
+            <thead><tr><th>Department</th><th>Agents</th><th>Leaves</th><th>Shrinkage</th><th>Status</th></tr></thead>
             <tbody>
-              {deptBreakdown.map(d => (
-                <tr key={d.dept} className="border-t border-border/30 table-row-hover">
-                  <td className="p-3.5 font-semibold">{d.dept}</td>
-                  <td className="p-3.5">{d.agents}</td>
-                  <td className="p-3.5">{d.leaves}</td>
-                  <td className="p-3.5 font-semibold">{d.shrinkage}%</td>
-                  <td className="p-3.5">
-                    <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold ${d.shrinkage > 8 ? 'bg-warning/15 text-warning' : 'bg-success/15 text-success'}`}>
+              {[
+                { dept: 'Customer Care', agents: 5, leaves: 24, shrinkage: 8.4 },
+                { dept: 'Technical Support', agents: 2, leaves: 18, shrinkage: 7.1 },
+              ].map(d => (
+                <tr key={d.dept}>
+                  <td className="font-semibold">{d.dept}</td>
+                  <td>{d.agents}</td>
+                  <td>{d.leaves}</td>
+                  <td className="font-semibold">{d.shrinkage}%</td>
+                  <td>
+                    <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold ${d.shrinkage > 8 ? 'bg-warning/12 text-warning' : 'bg-success/12 text-success'}`}>
                       {d.shrinkage > 8 ? 'Watch' : 'Healthy'}
                     </span>
                   </td>
@@ -152,6 +110,26 @@ export default function AdminAnalytics() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Gauge */}
+        <div className="glass-card gradient-border p-6 flex flex-col items-center justify-center">
+          <h3 className="font-bold tracking-heading mb-4">Target Achievement</h3>
+          <ResponsiveContainer width="100%" height={160}>
+            <RadialBarChart cx="50%" cy="50%" innerRadius="60%" outerRadius="90%" data={gaugeData} startAngle={180} endAngle={0}>
+              <defs>
+                <linearGradient id="gaugeGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="hsl(356, 98%, 62%)" />
+                  <stop offset="100%" stopColor="hsl(37, 100%, 58%)" />
+                </linearGradient>
+              </defs>
+              <RadialBar dataKey="value" cornerRadius={10} background={{ fill: 'hsl(220,10%,14%)' }} />
+            </RadialBarChart>
+          </ResponsiveContainer>
+          <div className="-mt-8 text-center">
+            <span className="text-3xl font-extrabold gradient-text">79%</span>
+            <p className="text-[10px] text-muted-foreground mt-1">of shrinkage target met</p>
+          </div>
         </div>
       </div>
     </motion.div>
