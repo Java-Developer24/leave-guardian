@@ -99,7 +99,7 @@ export default function SupervisorApprovals() {
                       <ShrinkageGauge now={s.now} after={s.after} cap={s.cap} />
                       {s.exceedsCap && (
                         <span className="flex items-center gap-1 text-[8px] bg-destructive/10 text-destructive px-2 py-0.5 rounded-full font-bold mt-1 w-fit border border-destructive/10">
-                          <AlertTriangle size={8} /> >{s.cap}%
+                          <AlertTriangle size={8} /> {'>'}{s.cap}%
                         </span>
                       )}
                     </td>
