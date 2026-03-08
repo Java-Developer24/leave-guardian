@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAppStore } from '@/state/store';
 import { ROLE_ROUTES } from '@/core/constants';
-import { seedUsers } from '@/data/seeds';
+import { seedUsers, seedDepartments } from '@/data/seeds';
 import { ArrowRight, Shield, Calendar, BarChart3, Mail, Lock, Sparkles, CheckCircle, Fingerprint, Zap, Users, Activity } from 'lucide-react';
 
 const features = [
