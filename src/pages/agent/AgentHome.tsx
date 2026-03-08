@@ -48,7 +48,7 @@ export default function AgentHome() {
   const swapTransfer = myLeaves.filter(l => l.type === 'Transfer' || l.type === 'Swap').length;
 
   const pendingRequests = myLeaves.filter(l => ['PendingSupervisor', 'PendingPeer'].includes(l.status));
-  const recentHistory = myLeaves.filter(l => l.status === 'Approved' || l.status === 'Rejected').slice(0, 8);
+  const recentHistory = myLeaves.filter(l => l.status === 'Approved' || l.status === 'Rejected').slice(0, 12);
   const getUserName = (id: string) => users.find(u => u.id === id)?.name ?? id;
 
   const currentMonth = new Date().getMonth();

@@ -98,7 +98,7 @@ export default function SupervisorHome() {
             </div>
           ) : (
             <div className="divide-y divide-border/10">
-              {pending.slice(0, 7).map((l, i) => (
+              {pending.slice(0, 12).map((l, i) => (
                 <motion.div key={l.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
                   className="px-6 py-3.5 flex items-center justify-between table-row-hover"
                 >
