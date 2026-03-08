@@ -2,12 +2,14 @@ import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { pageTransition } from '@/styles/motion';
 import { useAppStore } from '@/state/store';
+import SectionHeader from '@/components/SectionHeader';
 import LeaveCalendar from '@/components/calendar/LeaveCalendar';
 import { getNextMonth, toDateStr, getDaysInMonth } from '@/core/utils/dates';
 import { isDayBlocked, agentMonthlyCount } from '@/core/utils/shrinkage';
 import { validateReason, validateDateSelection } from '@/core/utils/validation';
 import { showToast } from '@/components/toasts/ToastContainer';
 import { isTodayInWindowForMonth } from '@/core/utils/dates';
+import { Send, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 
 export default function AgentLeave() {
   const { currentUser, leaves, holidays, rules, leaveWindow, schedule, repo, refreshLeaves } = useAppStore();
@@ -16,6 +18,7 @@ export default function AgentLeave() {
   const [month, setMonth] = useState(next.month);
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const [reason, setReason] = useState('');
+  const [leaveType, setLeaveType] = useState<'Planned' | 'Swap'>('Planned');
   const [errors, setErrors] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -50,17 +53,14 @@ export default function AgentLeave() {
 
   const handleSubmit = async () => {
     const errs: string[] = [];
-    if (!windowOpen) errs.push('Leave window is closed (22nd-26th of month)');
+    if (!windowOpen) errs.push('Leave window is closed. Apply between 22nd–26th of the month.');
     const dateErr = validateDateSelection(selectedDates);
     if (dateErr) errs.push(dateErr);
     const reasonErr = validateReason(reason);
     if (reasonErr) errs.push(reasonErr);
-    if (selectedDates.length > capRemaining) errs.push(`Monthly cap exceeded. ${capRemaining} leave(s) remaining.`);
+    if (selectedDates.length > capRemaining) errs.push(`Monthly cap exceeded. Only ${capRemaining} leave(s) remaining this month.`);
 
-    if (errs.length) {
-      setErrors(errs);
-      return;
-    }
+    if (errs.length) { setErrors(errs); return; }
 
     setSubmitting(true);
     try {
@@ -68,7 +68,7 @@ export default function AgentLeave() {
         await repo.createLeave({
           requesterId: currentUser!.id,
           departmentId: currentUser!.departmentId!,
-          type: 'Planned',
+          type: leaveType,
           date,
           days: 1,
           reason,
@@ -76,12 +76,12 @@ export default function AgentLeave() {
         });
       }
       await refreshLeaves();
-      showToast(`${selectedDates.length} leave(s) submitted`, 'success');
+      showToast(`${selectedDates.length} leave(s) submitted successfully`, 'success');
       setSelectedDates([]);
       setReason('');
       setErrors([]);
     } catch {
-      showToast('Failed to submit', 'error');
+      showToast('Failed to submit leave request', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -89,46 +89,92 @@ export default function AgentLeave() {
 
   return (
     <motion.div {...pageTransition}>
-      <h1 className="text-2xl font-bold tracking-heading mb-2">Apply Leave</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        {windowOpen
-          ? <span className="text-success">Leave window is open (22nd–26th)</span>
-          : <span className="text-destructive">Leave window is closed</span>
-        }
-        {' • '}{capRemaining} planned leave(s) remaining this month
-      </p>
+      <SectionHeader
+        tag="LEAVE APPLICATION"
+        title="Apply"
+        highlight="Leave"
+        description="Select dates from the calendar, enter a reason, and submit your leave request for supervisor approval."
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <LeaveCalendar
-          month={month}
-          year={year}
-          holidays={holidayMap}
-          blockedDates={blockedDates}
-          requestedDates={requestedDates}
-          approvedDates={approvedDates}
-          selectedDates={selectedDates}
-          onSelect={setSelectedDates}
-          onMonthChange={(y, m) => { setYear(y); setMonth(m); }}
-        />
+      {/* Status Bar */}
+      <div className="glass-card p-4 mb-6 flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-2">
+          {windowOpen ? (
+            <><CheckCircle size={16} className="text-success" /><span className="text-sm text-success font-medium">Window Open (22nd – 26th)</span></>
+          ) : (
+            <><AlertTriangle size={16} className="text-destructive" /><span className="text-sm text-destructive font-medium">Window Closed</span></>
+          )}
+        </div>
+        <div className="w-px h-5 bg-border" />
+        <div className="flex items-center gap-2">
+          <Info size={16} className="text-info" />
+          <span className="text-sm text-muted-foreground">
+            <strong className="text-foreground">{capRemaining}</strong> planned leave(s) remaining this month
+          </span>
+        </div>
+        <div className="w-px h-5 bg-border" />
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Max daily shrinkage: <strong className="text-foreground">{rules.maxDailyPct}%</strong></span>
+        </div>
+      </div>
 
-        <div className="glass-card p-5 space-y-4">
-          <h2 className="text-lg font-semibold tracking-heading">Leave Details</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {/* Calendar */}
+        <div className="lg:col-span-3">
+          <LeaveCalendar
+            month={month}
+            year={year}
+            holidays={holidayMap}
+            blockedDates={blockedDates}
+            requestedDates={requestedDates}
+            approvedDates={approvedDates}
+            selectedDates={selectedDates}
+            onSelect={setSelectedDates}
+            onMonthChange={(y, m) => { setYear(y); setMonth(m); }}
+          />
+        </div>
 
+        {/* Form */}
+        <div className="lg:col-span-2 glass-card accent-top-card p-6 space-y-5 h-fit">
+          <h2 className="text-lg font-bold tracking-heading">Leave Details</h2>
+
+          {/* Leave Type */}
           <div>
-            <label className="block text-xs tracking-label uppercase text-muted-foreground mb-1 font-medium">Selected Dates</label>
+            <label className="block text-[10px] tracking-section uppercase text-muted-foreground mb-2 font-semibold">Leave Type</label>
+            <div className="flex gap-2">
+              {(['Planned', 'Swap'] as const).map(t => (
+                <button
+                  key={t}
+                  onClick={() => setLeaveType(t)}
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
+                    leaveType === t
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-secondary/60 text-muted-foreground hover:text-foreground border border-border'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Selected Dates */}
+          <div>
+            <label className="block text-[10px] tracking-section uppercase text-muted-foreground mb-2 font-semibold">Selected Dates</label>
             {selectedDates.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Click dates on the calendar</p>
+              <p className="text-xs text-muted-foreground/60">Click dates on the calendar →</p>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {selectedDates.map(d => (
-                  <span key={d} className="bg-primary/20 text-primary px-2 py-1 rounded text-xs font-medium">{d}</span>
+                  <span key={d} className="bg-primary/15 text-primary px-2.5 py-1 rounded-lg text-xs font-semibold border border-primary/20">{d}</span>
                 ))}
               </div>
             )}
           </div>
 
+          {/* Reason */}
           <div>
-            <label htmlFor="reason" className="block text-xs tracking-label uppercase text-muted-foreground mb-1 font-medium">
+            <label htmlFor="reason" className="block text-[10px] tracking-section uppercase text-muted-foreground mb-2 font-semibold">
               Reason *
             </label>
             <textarea
@@ -137,23 +183,35 @@ export default function AgentLeave() {
               onChange={e => setReason(e.target.value)}
               rows={3}
               maxLength={200}
-              className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none resize-none"
+              className="glass-input resize-none"
               placeholder="Enter reason for leave..."
             />
+            <div className="text-right text-[10px] text-muted-foreground/50 mt-1">{reason.length}/200</div>
           </div>
 
+          {/* Errors */}
           {errors.length > 0 && (
-            <div className="bg-destructive/10 border border-destructive/30 rounded-md p-3 space-y-1">
-              {errors.map((e, i) => <p key={i} className="text-xs text-destructive">{e}</p>)}
+            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 space-y-1">
+              {errors.map((e, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <AlertTriangle size={12} className="text-destructive mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-destructive">{e}</p>
+                </div>
+              ))}
             </div>
           )}
 
+          {/* Submit */}
           <button
             onClick={handleSubmit}
-            disabled={submitting || !windowOpen}
-            className="w-full btn-primary-gradient text-primary-foreground font-semibold py-2.5 rounded-md disabled:opacity-50 transition-opacity"
+            disabled={submitting || !windowOpen || selectedDates.length === 0}
+            className="w-full btn-primary-gradient text-primary-foreground font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 disabled:opacity-40 text-sm"
           >
-            {submitting ? 'Submitting...' : 'Submit Leave Request'}
+            {submitting ? (
+              <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+            ) : (
+              <><Send size={15} /> Submit Leave Request</>
+            )}
           </button>
         </div>
       </div>
