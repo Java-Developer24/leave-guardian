@@ -111,7 +111,7 @@ export default function SupervisorHome() {
             <div className="flex justify-center mb-3">
               <div className="relative">
                 <MiniDonut pct={approvalRate} color="hsl(152, 69%, 42%)" />
-                <div className="absolute inset-0 flex items-center justify-center" style={{ transform: 'rotate(90deg)' }}>
+                <div className="absolute inset-0 flex items-center justify-center">
                   <span className="text-xl font-extrabold font-heading">{approvalRate}%</span>
                 </div>
               </div>

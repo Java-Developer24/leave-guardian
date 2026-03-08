@@ -22,7 +22,7 @@ function ProgressRing({ pct, size = 56 }: { pct: number; size?: number }) {
           transition={{ duration: 1, delay: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
         />
       </svg>
-      <div className="absolute inset-0 flex items-center justify-center" style={{ transform: 'rotate(90deg)' }}>
+      <div className="absolute inset-0 flex items-center justify-center">
         <span className="text-[11px] font-extrabold font-heading">{Math.round(pct)}%</span>
       </div>
     </div>
