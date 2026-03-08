@@ -335,7 +335,7 @@ export default function AdminAnalytics() {
 
       {/* ═══ Row 4: Department Table + Gauges ═══ */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2 glass-card p-6">
+        <div className="lg:col-span-2 glass-card-featured p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-bold tracking-heading font-heading text-sm">Department Breakdown</h3>
