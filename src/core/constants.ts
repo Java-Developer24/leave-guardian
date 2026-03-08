@@ -1,11 +1,11 @@
 export const LEAVE_STATUS_COLORS: Record<string, string> = {
-  Approved: 'bg-success text-success-foreground',
-  PendingSupervisor: 'bg-warning text-warning-foreground',
-  PendingPeer: 'bg-info text-info-foreground',
-  Submitted: 'bg-info text-info-foreground',
-  Rejected: 'bg-destructive text-destructive-foreground',
-  Cancelled: 'bg-muted text-muted-foreground',
-  Draft: 'bg-muted text-muted-foreground',
+  Approved: 'bg-success/15 text-success',
+  PendingSupervisor: 'bg-warning/15 text-warning',
+  PendingPeer: 'bg-info/15 text-info',
+  Submitted: 'bg-info/15 text-info',
+  Rejected: 'bg-destructive/15 text-destructive',
+  Cancelled: 'bg-muted/30 text-muted-foreground',
+  Draft: 'bg-muted/30 text-muted-foreground',
 };
 
 export const LEAVE_STATUS_LABELS: Record<string, string> = {
