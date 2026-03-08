@@ -34,28 +34,43 @@ const STATUS_COLORS: Record<string, string> = {
   PendingPeer: 'hsl(215, 100%, 58%)',
 };
 
-// Custom Treemap content
+// Custom Treemap content — enhanced with gradient fills and bold labels
 function TreemapContent(props: any) {
   const { x, y, width, height, name, value, index } = props;
-  if (width < 40 || height < 30) return null;
+  if (width < 30 || height < 25) return null;
+  const color = DEPT_COLORS[index % DEPT_COLORS.length];
   return (
     <g>
-      <rect x={x} y={y} width={width} height={height} rx={8}
-        fill={DEPT_COLORS[index % DEPT_COLORS.length]}
-        fillOpacity={0.25}
-        stroke={DEPT_COLORS[index % DEPT_COLORS.length]}
+      <defs>
+        <linearGradient id={`tree-grad-${index}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={0.45} />
+          <stop offset="100%" stopColor={color} stopOpacity={0.15} />
+        </linearGradient>
+      </defs>
+      <rect x={x + 1} y={y + 1} width={width - 2} height={height - 2} rx={10}
+        fill={`url(#tree-grad-${index})`}
+        stroke={color}
         strokeWidth={1.5}
-        strokeOpacity={0.4}
+        strokeOpacity={0.5}
       />
-      {width > 60 && height > 40 && (
+      {/* Inner glow line at top */}
+      {width > 50 && (
+        <rect x={x + 6} y={y + 3} width={Math.min(width * 0.4, 40)} height={2.5} rx={1.5} fill={color} fillOpacity={0.6} />
+      )}
+      {width > 55 && height > 38 && (
         <>
-          <text x={x + 8} y={y + 18} fontSize={10} fontWeight={700} fill="hsl(210,20%,96%)" fontFamily="Space Grotesk">
-            {name?.length > width / 7 ? name.slice(0, Math.floor(width / 7)) + '…' : name}
+          <text x={x + 10} y={y + 22} fontSize={11} fontWeight={800} fill="hsl(210,20%,96%)" fontFamily="Space Grotesk" letterSpacing="0.02em">
+            {name?.length > width / 7.5 ? name.slice(0, Math.floor(width / 7.5)) + '…' : name}
           </text>
-          <text x={x + 8} y={y + 32} fontSize={9} fill="hsl(225,10%,48%)" fontFamily="DM Sans">
+          <text x={x + 10} y={y + 38} fontSize={10} fontWeight={600} fill={color} fontFamily="DM Sans">
             {value} leaves
           </text>
         </>
+      )}
+      {width > 55 && height > 55 && (
+        <text x={x + 10} y={y + height - 10} fontSize={20} fontWeight={900} fill={color} fillOpacity={0.2} fontFamily="Space Grotesk">
+          {value}
+        </text>
       )}
     </g>
   );
@@ -287,11 +302,30 @@ export default function AdminAnalytics() {
           </ResponsiveContainer>
         </div>
 
-        <div className="glass-card-featured p-6">
-          <h3 className="font-bold tracking-heading font-heading text-sm mb-1">Department Heatmap</h3>
-          <p className="text-[10px] text-muted-foreground mb-4">Leave volume by department (treemap)</p>
-          <ResponsiveContainer width="100%" height={220}>
-            <Treemap data={treemapData} dataKey="size" nameKey="name" content={<TreemapContent />} animationDuration={300} />
+        <div className="glass-card-featured p-6 overflow-hidden relative">
+          {/* Decorative corner glow */}
+          <div className="absolute -top-12 -right-12 w-32 h-32 bg-accent/5 rounded-full blur-2xl pointer-events-none" />
+          <div className="flex items-center justify-between mb-5 relative z-10">
+            <div>
+              <h3 className="font-bold tracking-heading font-heading text-sm flex items-center gap-2">
+                <Layers size={14} className="text-accent" /> Department Heatmap
+              </h3>
+              <p className="text-[10px] text-muted-foreground mt-1">Leave volume by department — larger blocks = more leaves</p>
+            </div>
+            <span className="text-[9px] bg-accent/8 text-accent px-2.5 py-1 rounded-full font-bold border border-accent/12">{treemapData.length} depts</span>
+          </div>
+          {/* Mini legend row */}
+          <div className="flex flex-wrap gap-2 mb-4 relative z-10">
+            {treemapData.slice(0, 6).map((d, i) => (
+              <span key={d.name} className="flex items-center gap-1.5 text-[8px] text-muted-foreground/60">
+                <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: DEPT_COLORS[i % DEPT_COLORS.length] }} />
+                {d.name.replace('Messaging - ', 'M-').replace('Messaging ', 'M-')}
+              </span>
+            ))}
+            {treemapData.length > 6 && <span className="text-[8px] text-muted-foreground/30">+{treemapData.length - 6} more</span>}
+          </div>
+          <ResponsiveContainer width="100%" height={240}>
+            <Treemap data={treemapData} dataKey="size" nameKey="name" content={<TreemapContent />} animationDuration={400} />
           </ResponsiveContainer>
         </div>
       </div>
