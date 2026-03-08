@@ -154,8 +154,12 @@ const generateLeaves = (): LeaveRequest[] => {
   let leaveId = 1;
   const statuses: Array<LeaveRequest['status']> = [
     'PendingSupervisor', 'Approved', 'Rejected', 'PendingPeer', 'Approved', 'Approved', 'Approved', 'PendingSupervisor',
+    'Approved', 'Approved', 'PendingSupervisor', 'Approved', 'Rejected', 'Approved',
   ];
-  const types: Array<LeaveRequest['type']> = ['Planned', 'Planned', 'Swap', 'Transfer', 'Planned', 'Planned', 'Planned', 'Swap'];
+  const types: Array<LeaveRequest['type']> = [
+    'Planned', 'Planned', 'Swap', 'Transfer', 'Planned', 'Planned', 'Planned', 'Swap',
+    'Planned', 'Transfer', 'Planned', 'Planned', 'Swap', 'Planned',
+  ];
   const reasons = [
     "Personal work — bank visit", "Doctor appointment", "Family function", "Passport renewal",
     "Wedding ceremony", "School event", "Medical checkup", "Moving house", "Visa appointment",
@@ -164,16 +168,19 @@ const generateLeaves = (): LeaveRequest[] => {
     "Festival celebration", "Family emergency", "Court hearing", "Insurance meeting",
     "Property registration", "Child vaccination", "Airport pickup", "Furniture delivery",
     "Internet installation", "Marriage anniversary", "Spouse's medical appointment", "Pet emergency",
+    "Annual health screening", "Plumber visit at home", "Vet appointment", "Legal consultation",
+    "Bank loan paperwork", "Apartment inspection", "Gym membership renewal", "College reunion",
+    "Community volunteering", "Blood donation drive", "Charity event", "Kids sports day",
   ];
 
   generatedUsers.forEach((user, userIndex) => {
-    // Each agent gets 4-8 leave requests across Jan/Feb/Mar
-    const leaveCount = 4 + (userIndex % 5);
+    // Each agent gets 8-14 leave requests across Jan/Feb/Mar
+    const leaveCount = 8 + (userIndex % 7);
     for (let i = 0; i < leaveCount; i++) {
       const status = statuses[(userIndex + i) % statuses.length];
       const type = types[(userIndex + i) % types.length];
       const month = 1 + (i % 3); // Jan, Feb, Mar
-      const day = 3 + ((userIndex * 3 + i * 4) % 25);
+      const day = 2 + ((userIndex * 3 + i * 3) % 26);
       const date = `2026-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const submitMonth = month === 1 ? 12 : month - 1;
       const submitYear = month === 1 ? 2025 : 2026;
