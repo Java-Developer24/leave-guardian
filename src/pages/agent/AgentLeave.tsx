@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { pageTransition } from '@/styles/motion';
 import { useAppStore } from '@/state/store';
 import LeaveCalendar from '@/components/calendar/LeaveCalendar';
-import { getNextMonth, toDateStr } from '@/core/utils/dates';
+import { getNextMonth, toDateStr, getDaysInMonth } from '@/core/utils/dates';
 import { isDayBlocked, agentMonthlyCount } from '@/core/utils/shrinkage';
 import { validateReason, validateDateSelection } from '@/core/utils/validation';
 import { showToast } from '@/components/toasts/ToastContainer';
