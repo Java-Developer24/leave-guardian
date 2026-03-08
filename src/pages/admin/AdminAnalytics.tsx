@@ -266,8 +266,8 @@ export default function AdminAnalytics() {
       </div>
 
       {/* ═══ Row 2: Risk Dates + Dept Treemap ═══ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-        <div className="glass-card p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+        <div className="glass-card-featured p-6">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h3 className="font-bold tracking-heading font-heading text-sm flex items-center gap-2">
