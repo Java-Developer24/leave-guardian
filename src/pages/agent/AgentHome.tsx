@@ -171,7 +171,7 @@ export default function AgentHome() {
       </div>
 
       {/* Bottom Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Activity Timeline */}
         <div className="lg:col-span-2 glass-card p-6">
           <h2 className="text-sm font-bold tracking-heading mb-5 font-heading flex items-center gap-2">
