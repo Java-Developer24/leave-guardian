@@ -34,28 +34,43 @@ const STATUS_COLORS: Record<string, string> = {
   PendingPeer: 'hsl(215, 100%, 58%)',
 };
 
-// Custom Treemap content
+// Custom Treemap content — enhanced with gradient fills and bold labels
 function TreemapContent(props: any) {
   const { x, y, width, height, name, value, index } = props;
-  if (width < 40 || height < 30) return null;
+  if (width < 30 || height < 25) return null;
+  const color = DEPT_COLORS[index % DEPT_COLORS.length];
   return (
     <g>
-      <rect x={x} y={y} width={width} height={height} rx={8}
-        fill={DEPT_COLORS[index % DEPT_COLORS.length]}
-        fillOpacity={0.25}
-        stroke={DEPT_COLORS[index % DEPT_COLORS.length]}
+      <defs>
+        <linearGradient id={`tree-grad-${index}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={0.45} />
+          <stop offset="100%" stopColor={color} stopOpacity={0.15} />
+        </linearGradient>
+      </defs>
+      <rect x={x + 1} y={y + 1} width={width - 2} height={height - 2} rx={10}
+        fill={`url(#tree-grad-${index})`}
+        stroke={color}
         strokeWidth={1.5}
-        strokeOpacity={0.4}
+        strokeOpacity={0.5}
       />
-      {width > 60 && height > 40 && (
+      {/* Inner glow line at top */}
+      {width > 50 && (
+        <rect x={x + 6} y={y + 3} width={Math.min(width * 0.4, 40)} height={2.5} rx={1.5} fill={color} fillOpacity={0.6} />
+      )}
+      {width > 55 && height > 38 && (
         <>
-          <text x={x + 8} y={y + 18} fontSize={10} fontWeight={700} fill="hsl(210,20%,96%)" fontFamily="Space Grotesk">
-            {name?.length > width / 7 ? name.slice(0, Math.floor(width / 7)) + '…' : name}
+          <text x={x + 10} y={y + 22} fontSize={11} fontWeight={800} fill="hsl(210,20%,96%)" fontFamily="Space Grotesk" letterSpacing="0.02em">
+            {name?.length > width / 7.5 ? name.slice(0, Math.floor(width / 7.5)) + '…' : name}
           </text>
-          <text x={x + 8} y={y + 32} fontSize={9} fill="hsl(225,10%,48%)" fontFamily="DM Sans">
+          <text x={x + 10} y={y + 38} fontSize={10} fontWeight={600} fill={color} fontFamily="DM Sans">
             {value} leaves
           </text>
         </>
+      )}
+      {width > 55 && height > 55 && (
+        <text x={x + 10} y={y + height - 10} fontSize={20} fontWeight={900} fill={color} fillOpacity={0.2} fontFamily="Space Grotesk">
+          {value}
+        </text>
       )}
     </g>
   );
