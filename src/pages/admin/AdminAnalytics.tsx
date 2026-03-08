@@ -240,7 +240,7 @@ export default function AdminAnalytics() {
           </ResponsiveContainer>
         </div>
 
-        <div className="glass-card p-6">
+        <div className="glass-card-featured p-6">
           <h3 className="font-bold tracking-heading font-heading text-sm mb-1">Status Distribution</h3>
           <p className="text-[10px] text-muted-foreground mb-3">Current request breakdown</p>
           <ResponsiveContainer width="100%" height={170}>
