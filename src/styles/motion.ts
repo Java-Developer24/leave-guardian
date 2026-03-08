@@ -1,12 +1,12 @@
 export const pageTransition = {
-  initial: { opacity: 0, y: 16 },
+  initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -12 },
-  transition: { duration: 0.35, ease: [0.25, 0.1, 0.25, 1] as const },
+  exit: { opacity: 0, y: -16 },
+  transition: { duration: 0.4, ease: [0.25, 0.1, 0.25, 1] as const },
 };
 
 export const cardHover = {
-  whileHover: { scale: 1.02, y: -4, transition: { type: 'spring' as const, stiffness: 300, damping: 20 } },
+  whileHover: { scale: 1.02, y: -5, transition: { type: 'spring' as const, stiffness: 300, damping: 22 } },
 };
 
 export const modalBackdrop = {
@@ -17,19 +17,19 @@ export const modalBackdrop = {
 };
 
 export const modalPanel = {
-  initial: { opacity: 0, y: -12, scale: 0.95 },
+  initial: { opacity: 0, y: -16, scale: 0.95 },
   animate: { opacity: 1, y: 0, scale: 1 },
-  exit: { opacity: 0, y: -12, scale: 0.95 },
-  transition: { type: 'spring' as const, stiffness: 400, damping: 30 },
+  exit: { opacity: 0, y: -16, scale: 0.95 },
+  transition: { type: 'spring' as const, stiffness: 400, damping: 28 },
 };
 
 export const staggerContainer = {
-  animate: { transition: { staggerChildren: 0.08 } },
+  animate: { transition: { staggerChildren: 0.1 } },
 };
 
 export const staggerItem = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.25, 0.1, 0.25, 1] as const } },
+  initial: { opacity: 0, y: 24 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.25, 0.1, 0.25, 1] as const } },
 };
 
 export const fadeIn = {
@@ -39,9 +39,9 @@ export const fadeIn = {
 };
 
 export const slideUp = {
-  initial: { opacity: 0, y: 30 },
+  initial: { opacity: 0, y: 36 },
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.6, ease: [0.25, 0.1, 0.25, 1] as const },
+  transition: { duration: 0.65, ease: [0.25, 0.1, 0.25, 1] as const },
 };
 
 export const scaleIn = {
