@@ -59,8 +59,8 @@ export default function AgentHome() {
   ).length;
 
   const today = new Date().toISOString().slice(0, 10);
-  const upcomingHolidays = holidays.filter(h => h.date >= today).slice(0, 4);
-  const teamPeers = useMemo(() => users.filter(u => u.role === 'agent' && u.departmentId === currentUser?.departmentId && u.id !== currentUser?.id).slice(0, 6), [users, currentUser]);
+  const upcomingHolidays = holidays.filter(h => h.date >= today).slice(0, 5);
+  const teamPeers = useMemo(() => users.filter(u => u.role === 'agent' && u.departmentId === currentUser?.departmentId && u.id !== currentUser?.id).slice(0, 8), [users, currentUser]);
   const monthlyBreakdown = useMemo(() => {
     return [{ key: '01', label: 'Jan' }, { key: '02', label: 'Feb' }, { key: '03', label: 'Mar' }].map(m => {
       const mLeaves = myLeaves.filter(l => l.date.includes(`-${m.key}-`));
