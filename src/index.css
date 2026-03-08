@@ -443,6 +443,13 @@
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted)) transparent;
   }
+  .scrollbar-hidden {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+  }
   .font-heading {
     font-family: 'Space Grotesk', 'DM Sans', system-ui, sans-serif;
   }

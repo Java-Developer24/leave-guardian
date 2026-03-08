@@ -115,7 +115,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 overflow-y-auto scrollbar-thin space-y-5 mt-3" aria-label="Main navigation">
+      <nav className="flex-1 px-3 overflow-y-auto scrollbar-hidden space-y-5 mt-3" aria-label="Main navigation">
         {sections.map(section => (
           <div key={section.label}>
             {!collapsed && (
@@ -292,7 +292,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-5 md:p-7 lg:p-9 scrollbar-thin">
+        <main className="flex-1 overflow-y-auto p-5 md:p-7 lg:p-9 scrollbar-hidden">
           {children}
         </main>
       </div>

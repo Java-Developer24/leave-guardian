@@ -15,7 +15,6 @@ export const seedDepartments: Department[] = [
   { id: "d11", name: "One Pro", monthlyLeaveCap: 10 },
 ];
 
-// ─── First names & last names for generating agents ──────────
 const firstNames = [
   "Sara","Alex","Priya","Marcus","Emily","David","Aisha","Thomas","Sofia","Raj",
   "Liam","Olivia","Noah","Emma","James","Ava","Benjamin","Isabella","Lucas","Mia",
@@ -36,15 +35,13 @@ const lastNames = [
   "Carter","Mitchell","Perez","Roberts","Turner","Phillips","Campbell","Parker","Evans","Edwards",
 ];
 
-// ─── Generate 100 agents + supervisors + admin ───────────────
 const agentsPerDept: Record<string, number> = {
-  d1: 10, d2: 8, d3: 9, d4: 7, d5: 11, d6: 12, d7: 9, d8: 14, d9: 12, d10: 5, d11: 6,
+  d1: 12, d2: 10, d3: 11, d4: 9, d5: 13, d6: 14, d7: 11, d8: 16, d9: 14, d10: 7, d11: 8,
 };
 
 let userIdx = 0;
 const generatedUsers: User[] = [];
 
-// Supervisors (one per dept)
 const supervisors: User[] = seedDepartments.map((dept, i) => ({
   id: `sup${i + 1}`,
   name: `${firstNames[i + 50]} ${lastNames[i + 30]}`,
@@ -53,9 +50,8 @@ const supervisors: User[] = seedDepartments.map((dept, i) => ({
   departmentId: dept.id,
 }));
 
-// Agents
 seedDepartments.forEach(dept => {
-  const count = agentsPerDept[dept.id] || 8;
+  const count = agentsPerDept[dept.id] || 10;
   for (let i = 0; i < count; i++) {
     const fn = firstNames[userIdx % firstNames.length];
     const ln = lastNames[(userIdx + 7) % lastNames.length];
@@ -77,11 +73,9 @@ export const seedUsers: User[] = [
   { id: "admin2", name: "Admin Two", email: "admin2@genco.com", role: "admin" },
 ];
 
-// ─── Rules & Window ──────────────────────────────────────────
 export const seedRules: ShrinkageRules = { maxDailyPct: 10, maxMonthlyPct: 10, agentMonthlyLeaveCap: 2 };
 export const seedLeaveWindow: LeaveWindow = { open: true, startDay: 22, endDay: 26 };
 
-// ─── Holidays ────────────────────────────────────────────────
 export const seedHolidays: Holiday[] = [
   { id: "h1", name: "Republic Day", date: "2026-01-26", type: "National", allowedShrinkagePct: 15 },
   { id: "h2", name: "Valentine's Day", date: "2026-02-14", type: "Festival" },
@@ -95,7 +89,7 @@ export const seedHolidays: Holiday[] = [
   { id: "h10", name: "Company Foundation Day", date: "2026-06-15", type: "Company" },
 ];
 
-// ─── Schedule (Feb 2026 for all agents) ──────────────────────
+// ─── Schedule ────────────────────────────────────────────────
 const generateSchedule = (): ScheduleDay[] => {
   const rows: ScheduleDay[] = [];
   const agents = generatedUsers.map(u => u.id);
@@ -106,36 +100,41 @@ const generateSchedule = (): ScheduleDay[] => {
     { start: "06:00", end: "15:00" },
     { start: "14:00", end: "23:00" },
   ];
-  for (let d = 1; d <= 28; d++) {
-    const dateStr = `2026-02-${String(d).padStart(2, '0')}`;
-    const dayOfWeek = new Date(2026, 1, d).getDay();
-    agents.forEach((uid, i) => {
-      const shift = shifts[i % shifts.length];
-      rows.push({
-        userId: uid,
-        date: dateStr,
-        shiftStart: shift.start,
-        shiftEnd: shift.end,
-        weekOff: dayOfWeek === 0 || (dayOfWeek === 6 && d % 2 === 0),
+  // Generate for Jan + Feb + Mar 2026
+  for (let m = 0; m < 3; m++) {
+    const daysInMonth = m === 1 ? 28 : 31;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const mo = m + 1;
+      const dateStr = `2026-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const dayOfWeek = new Date(2026, m, d).getDay();
+      agents.forEach((uid, i) => {
+        const shift = shifts[i % shifts.length];
+        rows.push({
+          userId: uid,
+          date: dateStr,
+          shiftStart: shift.start,
+          shiftEnd: shift.end,
+          weekOff: dayOfWeek === 0 || (dayOfWeek === 6 && d % 2 === 0),
+        });
       });
-    });
+    }
   }
   return rows;
 };
 
 export const seedSchedule: ScheduleDay[] = generateSchedule();
 
-// ─── Attendance (spread across agents) ───────────────────────
+// ─── Attendance ──────────────────────────────────────────────
 const generateAttendance = (): Attendance[] => {
   const rows: Attendance[] = [];
   const agents = generatedUsers.map(u => u.id);
-  const dates = Array.from({ length: 20 }, (_, i) => `2026-02-${String(i + 1).padStart(2, '0')}`);
   agents.forEach((uid, idx) => {
-    // Each agent gets 2-4 attendance records
-    const count = 2 + (idx % 3);
+    const count = 4 + (idx % 5);
     for (let i = 0; i < count; i++) {
-      const date = dates[(idx * 3 + i * 7) % dates.length];
-      const present = (idx + i) % 4 !== 0;
+      const day = 1 + ((idx * 3 + i * 5) % 28);
+      const month = 1 + (i % 3);
+      const date = `2026-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const present = (idx + i) % 5 !== 0;
       rows.push({
         userId: uid,
         date,
@@ -149,33 +148,38 @@ const generateAttendance = (): Attendance[] => {
 
 export const seedAttendance: Attendance[] = generateAttendance();
 
-// ─── Leave Requests (lots of them across all depts) ──────────
+// ─── Leave Requests ──────────────────────────────────────────
 const generateLeaves = (): LeaveRequest[] => {
   const leaves: LeaveRequest[] = [];
   let leaveId = 1;
-  const statuses: Array<LeaveRequest['status']> = ['PendingSupervisor', 'Approved', 'Rejected', 'PendingPeer', 'Approved', 'Approved'];
-  const types: Array<LeaveRequest['type']> = ['Planned', 'Planned', 'Swap', 'Transfer', 'Planned', 'Planned'];
+  const statuses: Array<LeaveRequest['status']> = [
+    'PendingSupervisor', 'Approved', 'Rejected', 'PendingPeer', 'Approved', 'Approved', 'Approved', 'PendingSupervisor',
+  ];
+  const types: Array<LeaveRequest['type']> = ['Planned', 'Planned', 'Swap', 'Transfer', 'Planned', 'Planned', 'Planned', 'Swap'];
   const reasons = [
     "Personal work — bank visit", "Doctor appointment", "Family function", "Passport renewal",
     "Wedding ceremony", "School event", "Medical checkup", "Moving house", "Visa appointment",
     "Home repair", "Parent-teacher meeting", "Religious ceremony", "Vacation day", "Dental surgery",
     "Car service appointment", "Government office visit", "Sibling's graduation", "Home delivery",
     "Festival celebration", "Family emergency", "Court hearing", "Insurance meeting",
-    "Property registration", "Child vaccination", "Airport pickup",
+    "Property registration", "Child vaccination", "Airport pickup", "Furniture delivery",
+    "Internet installation", "Marriage anniversary", "Spouse's medical appointment", "Pet emergency",
   ];
 
   generatedUsers.forEach((user, userIndex) => {
-    // Each agent gets 2-5 leave requests
-    const leaveCount = 2 + (userIndex % 4);
+    // Each agent gets 4-8 leave requests across Jan/Feb/Mar
+    const leaveCount = 4 + (userIndex % 5);
     for (let i = 0; i < leaveCount; i++) {
       const status = statuses[(userIndex + i) % statuses.length];
       const type = types[(userIndex + i) % types.length];
-      const day = 5 + ((userIndex * 3 + i * 4) % 22);
-      const date = `2026-02-${String(day).padStart(2, '0')}`;
-      const submitDay = Math.max(1, day - 10 - (i * 2));
-      const submitDate = `2026-01-${String(submitDay).padStart(2, '0')}`;
+      const month = 1 + (i % 3); // Jan, Feb, Mar
+      const day = 3 + ((userIndex * 3 + i * 4) % 25);
+      const date = `2026-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const submitMonth = month === 1 ? 12 : month - 1;
+      const submitYear = month === 1 ? 2025 : 2026;
+      const submitDay = Math.max(1, Math.min(28, day - 5 + (i * 2)));
+      const submitDate = `${submitYear}-${String(submitMonth).padStart(2, '0')}-${String(submitDay).padStart(2, '0')}`;
 
-      // Find a peer in the same department for swaps/transfers
       const deptPeers = generatedUsers.filter(u => u.departmentId === user.departmentId && u.id !== user.id);
       const peer = deptPeers[(userIndex + i) % Math.max(1, deptPeers.length)];
 
@@ -183,10 +187,12 @@ const generateLeaves = (): LeaveRequest[] => {
 
       if (status === 'Approved') {
         const supervisor = supervisors.find(s => s.departmentId === user.departmentId);
-        history.push({ at: `2026-01-${String(submitDay + 1).padStart(2, '0')}`, by: supervisor?.id ?? 'sup1', action: 'Approved', note: 'Approved — within shrinkage limits' });
+        const approveDay = Math.min(28, submitDay + 1);
+        history.push({ at: `${submitYear}-${String(submitMonth).padStart(2, '0')}-${String(approveDay).padStart(2, '0')}`, by: supervisor?.id ?? 'sup1', action: 'Approved', note: 'Approved — within shrinkage limits' });
       } else if (status === 'Rejected') {
         const supervisor = supervisors.find(s => s.departmentId === user.departmentId);
-        history.push({ at: `2026-01-${String(submitDay + 1).padStart(2, '0')}`, by: supervisor?.id ?? 'sup1', action: 'Rejected', note: 'High shrinkage day — try another date' });
+        const rejectDay = Math.min(28, submitDay + 1);
+        history.push({ at: `${submitYear}-${String(submitMonth).padStart(2, '0')}-${String(rejectDay).padStart(2, '0')}`, by: supervisor?.id ?? 'sup1', action: 'Rejected', note: 'High shrinkage day — try another date' });
       }
 
       leaves.push({
