@@ -197,7 +197,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section ref={heroRef} className="relative z-10 px-6 lg:px-16 xl:px-24 pt-24 pb-40 lg:pt-36 lg:pb-52 max-w-[1400px] mx-auto">
+      <section ref={heroRef} className="relative z-10 px-6 lg:px-16 xl:px-24 pt-10 pb-24 lg:pt-16 lg:pb-32 max-w-[1400px] mx-auto">
         <motion.div style={{ y: heroY, opacity: heroOpacity, scale: heroScale }} className="text-center max-w-5xl mx-auto">
           <motion.div
             initial={{ opacity: 0, scale: 0.8, y: 10 }}
@@ -240,11 +240,11 @@ export default function LandingPage() {
             transition={{ delay: 0.5, duration: 0.5 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-14"
           >
-            <Link to="/login" className="btn-primary-gradient text-primary-foreground font-bold px-12 py-4.5 rounded-2xl text-base flex items-center gap-3 group shadow-2xl shadow-primary/25">
+            <Link to="/login" className="btn-primary-gradient text-primary-foreground font-bold px-10 py-3.5 rounded-2xl text-sm flex items-center gap-2.5 group shadow-2xl shadow-primary/25">
               Launch Dashboard
               <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
             </Link>
-            <a href="#features" className="bg-card/60 backdrop-blur-xl border border-border/60 text-foreground font-semibold px-10 py-4 rounded-2xl text-sm flex items-center gap-2.5 hover:bg-card/80 hover:border-border transition-all group">
+            <a href="#features" className="bg-card/60 backdrop-blur-xl border border-border/60 text-foreground font-semibold px-8 py-3 rounded-2xl text-sm flex items-center gap-2 hover:bg-card/80 hover:border-border transition-all group">
               <Globe size={16} className="text-muted-foreground group-hover:text-primary transition-colors" />
               Explore Features
             </a>
