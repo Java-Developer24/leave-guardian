@@ -152,11 +152,23 @@ export default function LoginPage() {
                     className="glass-input pl-11"
                   >
                     <option value="">Choose a user…</option>
-                    {seedUsers.map(u => (
-                      <option key={u.id} value={u.id}>
-                        {u.name} — {u.role.charAt(0).toUpperCase() + u.role.slice(1)}
-                      </option>
-                    ))}
+                    <optgroup label="👤 Admins">
+                      {seedUsers.filter(u => u.role === 'admin').map(u => (
+                        <option key={u.id} value={u.id}>{u.name} — Admin</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="👥 Supervisors">
+                      {seedUsers.filter(u => u.role === 'supervisor').map(u => {
+                        const dept = seedDepartments.find(d => d.id === u.departmentId);
+                        return <option key={u.id} value={u.id}>{u.name} — {dept?.name ?? 'Supervisor'}</option>;
+                      })}
+                    </optgroup>
+                    <optgroup label="🧑‍💼 Agents (sample)">
+                      {seedUsers.filter(u => u.role === 'agent').filter((_, i) => i % 10 === 0).map(u => {
+                        const dept = seedDepartments.find(d => d.id === u.departmentId);
+                        return <option key={u.id} value={u.id}>{u.name} — {dept?.name ?? 'Agent'}</option>;
+                      })}
+                    </optgroup>
                   </select>
                 </div>
               </div>
