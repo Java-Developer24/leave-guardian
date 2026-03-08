@@ -67,7 +67,12 @@ export default function SupervisorHome() {
 
       {/* KPIs */}
       <motion.div {...staggerContainer} initial="initial" animate="animate" className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-7">
-...
+        <motion.div variants={staggerItem}><KpiCard label="Approval Rate" value={`${approvalRate}%`} icon={<TrendingUp size={20} />} accent="success" sparkline={[65, 72, 80, 78, 85, 87]} /></motion.div>
+        <motion.div variants={staggerItem}><KpiCard label="Today's Shrinkage" value={`${currentShrinkage.toFixed(1)}%`} icon={<Gauge size={20} />} accent={currentShrinkage > rules.maxDailyPct ? 'primary' : 'info'} subtitle={`Cap: ${rules.maxDailyPct}%`} /></motion.div>
+        <motion.div variants={staggerItem}><KpiCard label="Pending Queue" value={pending.length} icon={<Clock size={20} />} accent="warning" /></motion.div>
+        <motion.div variants={staggerItem}><KpiCard label="Team Size" value={teamSize} icon={<Users size={20} />} accent="accent" /></motion.div>
+      </motion.div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Pending Approvals */}
         <div className="lg:col-span-2 glass-card-featured overflow-hidden">
