@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { pageTransition } from '@/styles/motion';
 import { useAppStore } from '@/state/store';
+import SectionHeader from '@/components/SectionHeader';
 import { showToast } from '@/components/toasts/ToastContainer';
+import { Calendar, Lock, Unlock } from 'lucide-react';
 
 export default function AdminLeaveWindow() {
   const { leaveWindow, repo, refreshLeaveWindow } = useAppStore();
@@ -18,70 +20,86 @@ export default function AdminLeaveWindow() {
   }, [leaveWindow]);
 
   const handleSave = async () => {
-    if (startDay >= endDay) {
-      showToast('Start day must be before end day', 'error');
-      return;
-    }
+    if (startDay >= endDay) { showToast('Start day must be before end day', 'error'); return; }
     setSaving(true);
     await repo.updateLeaveWindow({ open, startDay, endDay });
     await refreshLeaveWindow();
-    showToast('Leave window updated', 'success');
+    showToast('Leave window updated successfully', 'success');
     setSaving(false);
   };
 
   return (
     <motion.div {...pageTransition}>
-      <h1 className="text-2xl font-bold tracking-heading mb-6">Leave Window Configuration</h1>
+      <SectionHeader
+        tag="CONFIGURATION"
+        title="Leave Window"
+        highlight="Settings"
+        description="Control when agents can apply for planned leave. Changes are reflected instantly on the agent calendar."
+      />
 
-      <div className="glass-card p-6 max-w-lg space-y-5">
-        <div className="flex items-center justify-between">
-          <label className="text-sm font-medium">Window Status</label>
+      <div className="glass-card accent-top-card p-6 max-w-lg space-y-6">
+        {/* Toggle */}
+        <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-xl border border-border/30">
+          <div className="flex items-center gap-3">
+            {open ? <Unlock size={20} className="text-success" /> : <Lock size={20} className="text-destructive" />}
+            <div>
+              <div className="text-sm font-semibold">Window Status</div>
+              <div className="text-[11px] text-muted-foreground">Currently {open ? 'accepting' : 'blocking'} new applications</div>
+            </div>
+          </div>
           <button
             onClick={() => setOpen(!open)}
-            className={`relative w-12 h-6 rounded-full transition-colors ${open ? 'bg-success' : 'bg-muted'}`}
+            className={`relative w-14 h-7 rounded-full transition-colors ${open ? 'bg-success' : 'bg-muted'}`}
             role="switch"
             aria-checked={open}
           >
-            <span className={`absolute top-0.5 w-5 h-5 bg-foreground rounded-full transition-transform ${open ? 'left-6' : 'left-0.5'}`} />
+            <span className={`absolute top-0.5 w-6 h-6 bg-foreground rounded-full transition-transform shadow-lg ${open ? 'left-7' : 'left-0.5'}`} />
           </button>
         </div>
 
+        {/* Date Range */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs tracking-label uppercase text-muted-foreground mb-1 font-medium">Start Day</label>
-            <input
-              type="number"
-              min={1}
-              max={31}
-              value={startDay}
-              onChange={e => setStartDay(Number(e.target.value))}
-              className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none"
-            />
+            <label className="block text-[10px] tracking-section uppercase text-muted-foreground mb-2 font-semibold">Start Day</label>
+            <div className="relative">
+              <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" />
+              <input
+                type="number"
+                min={1}
+                max={31}
+                value={startDay}
+                onChange={e => setStartDay(Number(e.target.value))}
+                className="glass-input pl-9"
+              />
+            </div>
           </div>
           <div>
-            <label className="block text-xs tracking-label uppercase text-muted-foreground mb-1 font-medium">End Day</label>
-            <input
-              type="number"
-              min={1}
-              max={31}
-              value={endDay}
-              onChange={e => setEndDay(Number(e.target.value))}
-              className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none"
-            />
+            <label className="block text-[10px] tracking-section uppercase text-muted-foreground mb-2 font-semibold">End Day</label>
+            <div className="relative">
+              <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" />
+              <input
+                type="number"
+                min={1}
+                max={31}
+                value={endDay}
+                onChange={e => setEndDay(Number(e.target.value))}
+                className="glass-input pl-9"
+              />
+            </div>
           </div>
         </div>
 
-        <p className="text-xs text-muted-foreground">
-          Agents can apply for planned leave between day {startDay} and {endDay} of each month.
-          Window is currently <span className={open ? 'text-success' : 'text-destructive'}>{open ? 'open' : 'closed'}</span>.
-        </p>
+        {/* Info */}
+        <div className="bg-info/5 border border-info/15 rounded-xl p-4 text-xs text-muted-foreground">
+          <p>Agents can apply for planned leave between <strong className="text-foreground">day {startDay}</strong> and <strong className="text-foreground">day {endDay}</strong> of each month. The window is currently <strong className={open ? 'text-success' : 'text-destructive'}>{open ? 'open' : 'closed'}</strong>.</p>
+        </div>
 
         <button
           onClick={handleSave}
           disabled={saving}
-          className="w-full btn-primary-gradient text-primary-foreground font-semibold py-2.5 rounded-md disabled:opacity-50"
+          className="w-full btn-primary-gradient text-primary-foreground font-bold py-3.5 rounded-xl disabled:opacity-50 text-sm"
         >
-          {saving ? 'Saving...' : 'Save Changes'}
+          {saving ? 'Saving…' : 'Save Changes'}
         </button>
       </div>
     </motion.div>
