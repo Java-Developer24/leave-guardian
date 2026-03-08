@@ -41,7 +41,7 @@ export default function AgentSummary() {
       />
 
       {/* KPIs */}
-      <motion.div {...staggerContainer} initial="initial" animate="animate" className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <motion.div {...staggerContainer} initial="initial" animate="animate" className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-7">
         <motion.div variants={staggerItem}><KpiCard label="Total Requests" value={allMyLeaves.length} icon={<FileText size={20} />} accent="primary" /></motion.div>
         <motion.div variants={staggerItem}><KpiCard label="Approved" value={approved} icon={<CheckCircle size={20} />} accent="success" trend={{ value: `${allMyLeaves.length > 0 ? Math.round((approved / allMyLeaves.length) * 100) : 0}%`, direction: 'up' }} /></motion.div>
         <motion.div variants={staggerItem}><KpiCard label="Pending" value={pending} icon={<Clock size={20} />} accent="warning" /></motion.div>
