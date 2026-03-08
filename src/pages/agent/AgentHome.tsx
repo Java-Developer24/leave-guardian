@@ -48,7 +48,7 @@ export default function AgentHome() {
   const swapTransfer = myLeaves.filter(l => l.type === 'Transfer' || l.type === 'Swap').length;
 
   const pendingRequests = myLeaves.filter(l => ['PendingSupervisor', 'PendingPeer'].includes(l.status));
-  const recentHistory = myLeaves.filter(l => l.status === 'Approved' || l.status === 'Rejected').slice(0, 6);
+  const recentHistory = myLeaves.filter(l => l.status === 'Approved' || l.status === 'Rejected').slice(0, 8);
   const getUserName = (id: string) => users.find(u => u.id === id)?.name ?? id;
 
   const currentMonth = new Date().getMonth();
@@ -59,8 +59,8 @@ export default function AgentHome() {
   ).length;
 
   const today = new Date().toISOString().slice(0, 10);
-  const upcomingHolidays = holidays.filter(h => h.date >= today).slice(0, 4);
-  const teamPeers = useMemo(() => users.filter(u => u.role === 'agent' && u.departmentId === currentUser?.departmentId && u.id !== currentUser?.id).slice(0, 6), [users, currentUser]);
+  const upcomingHolidays = holidays.filter(h => h.date >= today).slice(0, 5);
+  const teamPeers = useMemo(() => users.filter(u => u.role === 'agent' && u.departmentId === currentUser?.departmentId && u.id !== currentUser?.id).slice(0, 8), [users, currentUser]);
   const monthlyBreakdown = useMemo(() => {
     return [{ key: '01', label: 'Jan' }, { key: '02', label: 'Feb' }, { key: '03', label: 'Mar' }].map(m => {
       const mLeaves = myLeaves.filter(l => l.date.includes(`-${m.key}-`));
@@ -75,7 +75,7 @@ export default function AgentHome() {
       />
 
       {/* KPI Row */}
-      <motion.div {...staggerContainer} initial="initial" animate="animate" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+      <motion.div {...staggerContainer} initial="initial" animate="animate" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5 mb-7">
         <motion.div variants={staggerItem}><KpiCard label="Total Requests" value={myLeaves.length} icon={<FileText size={20} />} accent="primary" sparkline={monthlyBreakdown.map(m => m.total)} /></motion.div>
         <motion.div variants={staggerItem}><KpiCard label="Approved" value={approved} icon={<CheckCircle size={20} />} accent="success" trend={{ value: `${myLeaves.length > 0 ? Math.round((approved / myLeaves.length) * 100) : 0}%`, direction: 'up' }} /></motion.div>
         <motion.div variants={staggerItem}><KpiCard label="Pending" value={pending} icon={<Clock size={20} />} accent="warning" /></motion.div>
@@ -84,7 +84,7 @@ export default function AgentHome() {
       </motion.div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {/* Pending Requests */}
         <div className="lg:col-span-2 glass-card-featured overflow-hidden">
           <div className="px-6 py-4 border-b border-border/15 flex items-center justify-between bg-gradient-to-r from-warning/3 to-transparent">
@@ -171,7 +171,7 @@ export default function AgentHome() {
       </div>
 
       {/* Bottom Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Activity Timeline */}
         <div className="lg:col-span-2 glass-card p-6">
           <h2 className="text-sm font-bold tracking-heading mb-5 font-heading flex items-center gap-2">

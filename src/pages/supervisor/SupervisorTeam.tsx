@@ -92,7 +92,7 @@ export default function SupervisorTeam() {
       </div>
 
       {/* Agent Cards */}
-      <motion.div {...staggerContainer} initial="initial" animate="animate" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <motion.div {...staggerContainer} initial="initial" animate="animate" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
         {filtered.map(m => {
           const risk = getRiskLevel(m.deficit);
           return (
