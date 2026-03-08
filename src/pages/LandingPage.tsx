@@ -197,7 +197,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section ref={heroRef} className="relative z-10 px-6 lg:px-16 xl:px-24 pt-24 pb-40 lg:pt-36 lg:pb-52 max-w-[1400px] mx-auto">
+      <section ref={heroRef} className="relative z-10 px-6 lg:px-16 xl:px-24 pt-10 pb-24 lg:pt-16 lg:pb-32 max-w-[1400px] mx-auto">
         <motion.div style={{ y: heroY, opacity: heroOpacity, scale: heroScale }} className="text-center max-w-5xl mx-auto">
           <motion.div
             initial={{ opacity: 0, scale: 0.8, y: 10 }}
