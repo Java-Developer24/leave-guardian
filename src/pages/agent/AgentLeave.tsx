@@ -4,12 +4,11 @@ import { pageTransition } from '@/styles/motion';
 import { useAppStore } from '@/state/store';
 import SectionHeader from '@/components/SectionHeader';
 import LeaveCalendar from '@/components/calendar/LeaveCalendar';
-import { getNextMonth, toDateStr, getDaysInMonth } from '@/core/utils/dates';
+import { getNextMonth, toDateStr, getDaysInMonth, isTodayInWindowForMonth } from '@/core/utils/dates';
 import { isDayBlocked, agentMonthlyCount } from '@/core/utils/shrinkage';
 import { validateReason, validateDateSelection } from '@/core/utils/validation';
 import { showToast } from '@/components/toasts/ToastContainer';
-import { isTodayInWindowForMonth } from '@/core/utils/dates';
-import { Send, AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import { Send, AlertTriangle, CheckCircle, Info, Calendar, Gauge } from 'lucide-react';
 
 export default function AgentLeave() {
   const { currentUser, leaves, holidays, rules, leaveWindow, schedule, repo, refreshLeaves } = useAppStore();
@@ -32,8 +31,7 @@ export default function AgentLeave() {
 
   const blockedDates = useMemo(() => {
     const s = new Set<string>();
-    const days = getDaysInMonth(year, month);
-    days.forEach(d => {
+    getDaysInMonth(year, month).forEach(d => {
       const ds = toDateStr(d);
       if (isDayBlocked(ds, leaves, schedule, rules, holidays)) s.add(ds);
     });
@@ -50,6 +48,7 @@ export default function AgentLeave() {
 
   const currentCount = agentMonthlyCount(currentUser?.id ?? '', month, year, leaves);
   const capRemaining = rules.agentMonthlyLeaveCap - currentCount;
+  const capPct = (currentCount / rules.agentMonthlyLeaveCap) * 100;
 
   const handleSubmit = async () => {
     const errs: string[] = [];
@@ -58,8 +57,7 @@ export default function AgentLeave() {
     if (dateErr) errs.push(dateErr);
     const reasonErr = validateReason(reason);
     if (reasonErr) errs.push(reasonErr);
-    if (selectedDates.length > capRemaining) errs.push(`Monthly cap exceeded. Only ${capRemaining} leave(s) remaining this month.`);
-
+    if (selectedDates.length > capRemaining) errs.push(`Monthly cap exceeded. Only ${capRemaining} leave(s) remaining.`);
     if (errs.length) { setErrors(errs); return; }
 
     setSubmitting(true);
@@ -97,63 +95,72 @@ export default function AgentLeave() {
       />
 
       {/* Status Bar */}
-      <div className="glass-card p-4 mb-6 flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2">
+      <div className="glass-card p-4 mb-6 flex flex-wrap items-center gap-5">
+        <div className="flex items-center gap-2.5">
           {windowOpen ? (
-            <><CheckCircle size={16} className="text-success" /><span className="text-sm text-success font-medium">Window Open (22nd – 26th)</span></>
+            <><div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center"><CheckCircle size={16} className="text-success" /></div><div><span className="text-sm text-success font-semibold block">Window Open</span><span className="text-[10px] text-muted-foreground">22nd – 26th</span></div></>
           ) : (
-            <><AlertTriangle size={16} className="text-destructive" /><span className="text-sm text-destructive font-medium">Window Closed</span></>
+            <><div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center"><AlertTriangle size={16} className="text-destructive" /></div><div><span className="text-sm text-destructive font-semibold block">Window Closed</span><span className="text-[10px] text-muted-foreground">Apply 22nd–26th</span></div></>
           )}
         </div>
-        <div className="w-px h-5 bg-border" />
-        <div className="flex items-center gap-2">
-          <Info size={16} className="text-info" />
-          <span className="text-sm text-muted-foreground">
-            <strong className="text-foreground">{capRemaining}</strong> planned leave(s) remaining this month
-          </span>
+        <div className="w-px h-8 bg-border/30" />
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-info/10 flex items-center justify-center"><Calendar size={16} className="text-info" /></div>
+          <div>
+            <span className="text-sm font-semibold"><span className="text-foreground">{capRemaining}</span></span>
+            <span className="text-[10px] text-muted-foreground block">leaves remaining</span>
+          </div>
         </div>
-        <div className="w-px h-5 bg-border" />
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Max daily shrinkage: <strong className="text-foreground">{rules.maxDailyPct}%</strong></span>
+        <div className="w-px h-8 bg-border/30" />
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center"><Gauge size={16} className="text-warning" /></div>
+          <div>
+            <span className="text-sm font-semibold">{rules.maxDailyPct}%</span>
+            <span className="text-[10px] text-muted-foreground block">max shrinkage</span>
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Calendar */}
         <div className="lg:col-span-3">
           <LeaveCalendar
-            month={month}
-            year={year}
-            holidays={holidayMap}
-            blockedDates={blockedDates}
-            requestedDates={requestedDates}
-            approvedDates={approvedDates}
-            selectedDates={selectedDates}
+            month={month} year={year} holidays={holidayMap}
+            blockedDates={blockedDates} requestedDates={requestedDates}
+            approvedDates={approvedDates} selectedDates={selectedDates}
             onSelect={setSelectedDates}
             onMonthChange={(y, m) => { setYear(y); setMonth(m); }}
           />
         </div>
 
-        {/* Form */}
         <div className="lg:col-span-2 glass-card accent-top-card p-6 space-y-5 h-fit">
           <h2 className="text-lg font-bold tracking-heading">Leave Details</h2>
+
+          {/* Cap progress */}
+          <div>
+            <div className="flex justify-between text-[11px] mb-1.5">
+              <span className="text-muted-foreground">Monthly Cap Usage</span>
+              <span className="font-bold">{currentCount}/{rules.agentMonthlyLeaveCap}</span>
+            </div>
+            <div className="h-2 bg-secondary rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(100, capPct)}%` }}
+                transition={{ duration: 0.6 }}
+                className={`h-full rounded-full ${capPct >= 100 ? 'bg-destructive' : 'accent-bar'}`}
+              />
+            </div>
+          </div>
 
           {/* Leave Type */}
           <div>
             <label className="block text-[10px] tracking-section uppercase text-muted-foreground mb-2 font-semibold">Leave Type</label>
             <div className="flex gap-2">
               {(['Planned', 'Swap'] as const).map(t => (
-                <button
-                  key={t}
-                  onClick={() => setLeaveType(t)}
-                  className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
-                    leaveType === t
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-secondary/60 text-muted-foreground hover:text-foreground border border-border'
+                <button key={t} onClick={() => setLeaveType(t)}
+                  className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                    leaveType === t ? 'bg-primary text-primary-foreground shadow-lg' : 'bg-secondary/40 text-muted-foreground hover:text-foreground border border-border/50'
                   }`}
-                >
-                  {t}
-                </button>
+                >{t}</button>
               ))}
             </div>
           </div>
@@ -162,11 +169,11 @@ export default function AgentLeave() {
           <div>
             <label className="block text-[10px] tracking-section uppercase text-muted-foreground mb-2 font-semibold">Selected Dates</label>
             {selectedDates.length === 0 ? (
-              <p className="text-xs text-muted-foreground/60">Click dates on the calendar →</p>
+              <p className="text-xs text-muted-foreground/50">Click dates on the calendar →</p>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {selectedDates.map(d => (
-                  <span key={d} className="bg-primary/15 text-primary px-2.5 py-1 rounded-lg text-xs font-semibold border border-primary/20">{d}</span>
+                  <span key={d} className="bg-primary/12 text-primary px-2.5 py-1 rounded-lg text-[11px] font-bold border border-primary/15">{d}</span>
                 ))}
               </div>
             )}
@@ -174,24 +181,17 @@ export default function AgentLeave() {
 
           {/* Reason */}
           <div>
-            <label htmlFor="reason" className="block text-[10px] tracking-section uppercase text-muted-foreground mb-2 font-semibold">
-              Reason *
-            </label>
+            <label htmlFor="reason" className="block text-[10px] tracking-section uppercase text-muted-foreground mb-2 font-semibold">Reason *</label>
             <textarea
-              id="reason"
-              value={reason}
-              onChange={e => setReason(e.target.value)}
-              rows={3}
-              maxLength={200}
-              className="glass-input resize-none"
+              id="reason" value={reason} onChange={e => setReason(e.target.value)}
+              rows={3} maxLength={200} className="glass-input resize-none"
               placeholder="Enter reason for leave..."
             />
-            <div className="text-right text-[10px] text-muted-foreground/50 mt-1">{reason.length}/200</div>
+            <div className="text-right text-[10px] text-muted-foreground/40 mt-1">{reason.length}/200</div>
           </div>
 
-          {/* Errors */}
           {errors.length > 0 && (
-            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 space-y-1">
+            <div className="bg-destructive/8 border border-destructive/15 rounded-xl p-3 space-y-1">
               {errors.map((e, i) => (
                 <div key={i} className="flex items-start gap-2">
                   <AlertTriangle size={12} className="text-destructive mt-0.5 flex-shrink-0" />
@@ -201,7 +201,6 @@ export default function AgentLeave() {
             </div>
           )}
 
-          {/* Submit */}
           <button
             onClick={handleSubmit}
             disabled={submitting || !windowOpen || selectedDates.length === 0}
