@@ -240,7 +240,7 @@ export default function LandingPage() {
             transition={{ delay: 0.5, duration: 0.5 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-14"
           >
-            <Link to="/login" className="btn-primary-gradient text-primary-foreground font-bold px-12 py-4.5 rounded-2xl text-base flex items-center gap-3 group shadow-2xl shadow-primary/25">
+            <Link to="/login" className="btn-primary-gradient text-primary-foreground font-bold px-10 py-3.5 rounded-2xl text-sm flex items-center gap-2.5 group shadow-2xl shadow-primary/25">
               Launch Dashboard
               <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
             </Link>
