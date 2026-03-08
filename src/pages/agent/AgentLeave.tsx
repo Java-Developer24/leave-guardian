@@ -29,8 +29,7 @@ export default function AgentLeave() {
 
   const blockedDates = useMemo(() => {
     const s = new Set<string>();
-    const { getDaysInMonth } = require('@/core/utils/dates');
-    const days: Date[] = getDaysInMonth(year, month);
+    const days = getDaysInMonth(year, month);
     days.forEach(d => {
       const ds = toDateStr(d);
       if (isDayBlocked(ds, leaves, schedule, rules, holidays)) s.add(ds);
