@@ -297,8 +297,8 @@ export default function AdminAnalytics() {
       </div>
 
       {/* ═══ Row 3: Department Scatter + Leave Types ═══ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-        <div className="glass-card p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+        <div className="glass-card-featured p-6">
           <h3 className="font-bold tracking-heading font-heading text-sm mb-1">Department Efficiency</h3>
           <p className="text-[10px] text-muted-foreground mb-4">Team size vs leaves per agent</p>
           <ResponsiveContainer width="100%" height={240}>
