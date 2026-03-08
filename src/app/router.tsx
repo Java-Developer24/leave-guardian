@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAppStore } from '@/state/store';
 import AppShell from '@/components/layout/AppShell';
 
+const LandingPage = lazy(() => import('@/pages/LandingPage'));
 const LoginPage = lazy(() => import('@/pages/login/LoginPage'));
 const AgentHome = lazy(() => import('@/pages/agent/AgentHome'));
 const AgentSummary = lazy(() => import('@/pages/agent/AgentSummary'));
@@ -28,7 +29,10 @@ function RoleGuard({ role, children }: { role: string; children: React.ReactNode
 function Loading() {
   return (
     <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="relative">
+        <div className="w-10 h-10 border-2 border-primary/20 rounded-full" />
+        <div className="absolute inset-0 w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
     </div>
   );
 }
@@ -38,8 +42,8 @@ export default function AppRouter() {
     <Suspense fallback={<Loading />}>
       <AppShell>
         <Routes>
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={<Navigate to="/login" replace />} />
 
           <Route path="/agent/home" element={<RoleGuard role="agent"><AgentHome /></RoleGuard>} />
           <Route path="/agent/summary" element={<RoleGuard role="agent"><AgentSummary /></RoleGuard>} />
@@ -57,7 +61,7 @@ export default function AppRouter() {
           <Route path="/admin/config/holidays" element={<RoleGuard role="admin"><AdminHolidays /></RoleGuard>} />
           <Route path="/admin/analytics" element={<RoleGuard role="admin"><AdminAnalytics /></RoleGuard>} />
 
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppShell>
     </Suspense>

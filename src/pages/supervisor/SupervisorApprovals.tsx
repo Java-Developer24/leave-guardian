@@ -8,7 +8,32 @@ import { formatDate } from '@/core/utils/dates';
 import { calcDailyShrinkage } from '@/core/utils/shrinkage';
 import { showToast } from '@/components/toasts/ToastContainer';
 import Modal from '@/components/modals/Modal';
-import { AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle, XCircle, Gauge } from 'lucide-react';
+
+function ShrinkageGauge({ now, after, cap }: { now: number; after: number; cap: number }) {
+  const nowPct = Math.min(100, (now / (cap * 1.5)) * 100);
+  const afterPct = Math.min(100, (after / (cap * 1.5)) * 100);
+  const exceedsCap = after > cap;
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-2 text-[10px]">
+        <span className="text-muted-foreground">Now</span>
+        <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
+          <motion.div initial={{ width: 0 }} animate={{ width: `${nowPct}%` }} transition={{ duration: 0.5 }} className="h-full bg-info/60 rounded-full" />
+        </div>
+        <span className="font-semibold w-10 text-right">{now}%</span>
+      </div>
+      <div className="flex items-center gap-2 text-[10px]">
+        <span className="text-muted-foreground">After</span>
+        <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
+          <motion.div initial={{ width: 0 }} animate={{ width: `${afterPct}%` }} transition={{ duration: 0.5, delay: 0.1 }}
+            className={`h-full rounded-full ${exceedsCap ? 'bg-destructive/60' : 'bg-success/60'}`} />
+        </div>
+        <span className={`font-bold w-10 text-right ${exceedsCap ? 'text-destructive' : 'text-success'}`}>{after}%</span>
+      </div>
+    </div>
+  );
+}
 
 export default function SupervisorApprovals() {
   const { currentUser, leaves, users, schedule, rules, holidays, repo, refreshLeaves } = useAppStore();
@@ -30,7 +55,7 @@ export default function SupervisorApprovals() {
     const after = calcDailyShrinkage(leave.date, afterLeaves, schedule);
     const holiday = holidays.find(h => h.date === leave.date);
     const cap = holiday?.allowedShrinkagePct ?? rules.maxDailyPct;
-    return { now: now.toFixed(1), after: after.toFixed(1), exceedsCap: after > cap, cap };
+    return { now: parseFloat(now.toFixed(1)), after: parseFloat(after.toFixed(1)), exceedsCap: after > cap, cap };
   };
 
   const handleAction = async () => {
@@ -54,72 +79,64 @@ export default function SupervisorApprovals() {
         tag="APPROVAL QUEUE"
         title="Leave"
         highlight="Approvals"
-        description={`${pending.length} pending request${pending.length !== 1 ? 's' : ''} requiring your review. Monitor shrinkage impact before approving.`}
+        description={`${pending.length} pending request${pending.length !== 1 ? 's' : ''} requiring your review.`}
       />
 
       <div className="glass-card overflow-hidden">
-        {/* Desktop table */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm premium-table">
             <thead>
-              <tr className="border-b border-border bg-secondary/20">
-                {['Agent', 'Date', 'Type', 'Reason', 'Shrinkage Impact', 'Status', 'Actions'].map(h => (
-                  <th key={h} className="text-left p-4 text-[10px] tracking-section uppercase text-muted-foreground font-semibold">{h}</th>
+              <tr>
+                {['Agent', 'Date', 'Type', 'Reason', 'Shrinkage Impact', 'Actions'].map(h => (
+                  <th key={h}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {pending.map(l => {
+              {pending.map((l, i) => {
                 const s = getShrinkageChange(l);
                 return (
-                  <tr key={l.id} className="border-b border-border/30 table-row-hover">
-                    <td className="p-4">
+                  <motion.tr key={l.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}>
+                    <td>
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/15 to-accent/8 flex items-center justify-center text-[10px] font-bold text-primary border border-primary/10">
                           {getInitials(l.requesterId)}
                         </div>
                         <div>
                           <div className="font-semibold text-sm">{getUserName(l.requesterId)}</div>
-                          <div className="text-[11px] text-muted-foreground">Agent</div>
+                          <div className="text-[10px] text-muted-foreground">Agent</div>
                         </div>
                       </div>
                     </td>
-                    <td className="p-4 font-medium">{formatDate(l.date)}</td>
-                    <td className="p-4">
-                      <span className="text-[10px] bg-secondary px-2 py-1 rounded-md font-semibold uppercase tracking-wider">{l.type}</span>
+                    <td className="font-semibold">{formatDate(l.date)}</td>
+                    <td><span className="text-[10px] bg-secondary/60 px-2.5 py-1 rounded-lg font-bold uppercase tracking-wider">{l.type}</span></td>
+                    <td className="text-muted-foreground text-xs max-w-[160px]">{l.reason || '—'}</td>
+                    <td className="min-w-[200px]">
+                      <ShrinkageGauge now={s.now} after={s.after} cap={s.cap} />
+                      {s.exceedsCap && (
+                        <span className="flex items-center gap-1 text-[9px] bg-destructive/12 text-destructive px-2 py-0.5 rounded-full font-bold mt-1 w-fit">
+                          <AlertTriangle size={9} /> Exceeds {s.cap}%
+                        </span>
+                      )}
                     </td>
-                    <td className="p-4 text-muted-foreground text-xs max-w-[180px]">{l.reason || '—'}</td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium">{s.now}%</span>
-                        <span className="text-muted-foreground text-xs">→</span>
-                        <span className={`text-xs font-bold ${s.exceedsCap ? 'text-destructive' : 'text-success'}`}>{s.after}%</span>
-                        {s.exceedsCap && (
-                          <span className="flex items-center gap-1 text-[10px] bg-destructive/15 text-destructive px-2 py-0.5 rounded-full font-semibold">
-                            <AlertTriangle size={10} /> Over {s.cap}%
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-4"><StatusChip status={l.status} /></td>
-                    <td className="p-4">
+                    <td>
                       <div className="flex gap-2">
-                        <button
-                          onClick={() => setCommentModal({ id: l.id, action: 'approve' })}
-                          className="px-3.5 py-2 text-xs font-semibold bg-success/15 text-success border border-success/25 rounded-lg hover:bg-success/25 transition-all flex items-center gap-1.5"
-                        ><CheckCircle size={13} /> Approve</button>
-                        <button
-                          onClick={() => setCommentModal({ id: l.id, action: 'reject' })}
-                          className="px-3.5 py-2 text-xs font-semibold bg-destructive/15 text-destructive border border-destructive/25 rounded-lg hover:bg-destructive/25 transition-all flex items-center gap-1.5"
-                        ><XCircle size={13} /> Reject</button>
+                        <button onClick={() => setCommentModal({ id: l.id, action: 'approve' })}
+                          className="px-3.5 py-2 text-xs font-bold bg-success/10 text-success border border-success/20 rounded-xl hover:bg-success/20 transition-all flex items-center gap-1.5">
+                          <CheckCircle size={13} /> Approve
+                        </button>
+                        <button onClick={() => setCommentModal({ id: l.id, action: 'reject' })}
+                          className="px-3.5 py-2 text-xs font-bold bg-destructive/10 text-destructive border border-destructive/20 rounded-xl hover:bg-destructive/20 transition-all flex items-center gap-1.5">
+                          <XCircle size={13} /> Reject
+                        </button>
                       </div>
                     </td>
-                  </tr>
+                  </motion.tr>
                 );
               })}
               {pending.length === 0 && (
-                <tr><td colSpan={7} className="p-10 text-center">
-                  <CheckCircle size={36} className="mx-auto mb-3 text-success/30" />
+                <tr><td colSpan={6} className="p-12 text-center">
+                  <CheckCircle size={40} className="mx-auto mb-3 text-success/25" />
                   <p className="text-sm text-muted-foreground">All approvals are processed</p>
                 </td></tr>
               )}
@@ -128,24 +145,24 @@ export default function SupervisorApprovals() {
         </div>
 
         {/* Mobile */}
-        <div className="md:hidden divide-y divide-border/30">
+        <div className="md:hidden divide-y divide-border/20">
           {pending.map(l => {
             const s = getShrinkageChange(l);
             return (
               <div key={l.id} className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">{getInitials(l.requesterId)}</div>
+                    <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">{getInitials(l.requesterId)}</div>
                     <div>
                       <div className="text-sm font-semibold">{getUserName(l.requesterId)}</div>
                       <div className="text-[10px] text-muted-foreground">{formatDate(l.date)} • {l.type}</div>
                     </div>
                   </div>
-                  <span className="text-xs">{s.now}% → <span className={s.exceedsCap ? 'text-destructive font-bold' : 'text-success font-bold'}>{s.after}%</span></span>
                 </div>
+                <ShrinkageGauge now={s.now} after={s.after} cap={s.cap} />
                 <div className="flex gap-2">
-                  <button onClick={() => setCommentModal({ id: l.id, action: 'approve' })} className="flex-1 py-2.5 text-xs font-semibold bg-success/15 text-success border border-success/25 rounded-lg flex items-center justify-center gap-1"><CheckCircle size={13} /> Approve</button>
-                  <button onClick={() => setCommentModal({ id: l.id, action: 'reject' })} className="flex-1 py-2.5 text-xs font-semibold bg-destructive/15 text-destructive border border-destructive/25 rounded-lg flex items-center justify-center gap-1"><XCircle size={13} /> Reject</button>
+                  <button onClick={() => setCommentModal({ id: l.id, action: 'approve' })} className="flex-1 py-2.5 text-xs font-bold bg-success/10 text-success border border-success/20 rounded-xl flex items-center justify-center gap-1"><CheckCircle size={13} /> Approve</button>
+                  <button onClick={() => setCommentModal({ id: l.id, action: 'reject' })} className="flex-1 py-2.5 text-xs font-bold bg-destructive/10 text-destructive border border-destructive/20 rounded-xl flex items-center justify-center gap-1"><XCircle size={13} /> Reject</button>
                 </div>
               </div>
             );
@@ -156,16 +173,10 @@ export default function SupervisorApprovals() {
       <Modal open={!!commentModal} onClose={() => { setCommentModal(null); setComment(''); }} title={commentModal?.action === 'approve' ? 'Approve Leave' : 'Reject Leave'}>
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">Add an optional comment for the agent.</p>
-          <textarea
-            value={comment}
-            onChange={e => setComment(e.target.value)}
-            rows={3}
-            className="glass-input resize-none"
-            placeholder="Optional comment..."
-          />
+          <textarea value={comment} onChange={e => setComment(e.target.value)} rows={3} className="glass-input resize-none" placeholder="Optional comment..." />
           <div className="flex gap-2 justify-end">
-            <button onClick={() => { setCommentModal(null); setComment(''); }} className="px-5 py-2.5 text-sm bg-secondary rounded-lg hover:bg-secondary/80 transition-colors font-medium">Cancel</button>
-            <button onClick={handleAction} className="px-5 py-2.5 text-sm btn-primary-gradient text-primary-foreground rounded-lg font-bold">Confirm</button>
+            <button onClick={() => { setCommentModal(null); setComment(''); }} className="px-5 py-2.5 text-sm bg-secondary rounded-xl font-medium hover:bg-secondary/80 transition-colors">Cancel</button>
+            <button onClick={handleAction} className="px-5 py-2.5 text-sm btn-primary-gradient text-primary-foreground rounded-xl font-bold">Confirm</button>
           </div>
         </div>
       </Modal>
