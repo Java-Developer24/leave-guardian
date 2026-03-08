@@ -375,7 +375,7 @@
     font-family: 'Space Grotesk', sans-serif;
   }
   .premium-table tbody tr {
-    @apply border-t transition-all duration-250;
+    @apply border-t transition-all duration-200;
     border-color: hsla(225, 12%, 13%, 0.4);
   }
   .premium-table tbody tr:hover {
