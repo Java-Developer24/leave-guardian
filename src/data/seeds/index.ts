@@ -1,27 +1,87 @@
 import type { User, Department, ShrinkageRules, LeaveWindow, Holiday, ScheduleDay, Attendance, LeaveRequest } from '@/core/entities';
 
-export const seedUsers: User[] = [
-  { id: "u1", name: "Sara Johnson", email: "sara@genco.com", role: "agent", departmentId: "d1" },
-  { id: "u2", name: "Alex Chen", email: "alex@genco.com", role: "agent", departmentId: "d1" },
-  { id: "u3", name: "Priya Sharma", email: "priya@genco.com", role: "supervisor", departmentId: "d1" },
-  { id: "u4", name: "Admin One", email: "admin@genco.com", role: "admin" },
-  { id: "u5", name: "Marcus Lee", email: "marcus@genco.com", role: "agent", departmentId: "d1" },
-  { id: "u6", name: "Emily Rodriguez", email: "emily@genco.com", role: "agent", departmentId: "d1" },
-  { id: "u7", name: "David Kim", email: "david@genco.com", role: "agent", departmentId: "d1" },
-  { id: "u8", name: "Aisha Okonkwo", email: "aisha@genco.com", role: "agent", departmentId: "d2" },
-  { id: "u9", name: "Thomas Berg", email: "thomas@genco.com", role: "agent", departmentId: "d2" },
-  { id: "u10", name: "Sofia Rossi", email: "sofia@genco.com", role: "supervisor", departmentId: "d2" },
-];
-
+// ─── Departments ─────────────────────────────────────────────
 export const seedDepartments: Department[] = [
-  { id: "d1", name: "Customer Care", monthlyLeaveCap: 12 },
-  { id: "d2", name: "Technical Support", monthlyLeaveCap: 10 },
+  { id: "d1", name: "Messaging - Account Support", monthlyLeaveCap: 12 },
+  { id: "d2", name: "Messaging - Email Support", monthlyLeaveCap: 10 },
+  { id: "d3", name: "Messaging - General", monthlyLeaveCap: 11 },
+  { id: "d4", name: "Messaging - Hosting", monthlyLeaveCap: 10 },
+  { id: "d5", name: "Messaging - Sales", monthlyLeaveCap: 14 },
+  { id: "d6", name: "Messaging India", monthlyLeaveCap: 15 },
+  { id: "d7", name: "Messaging APAC", monthlyLeaveCap: 12 },
+  { id: "d8", name: "Inbound", monthlyLeaveCap: 18 },
+  { id: "d9", name: "Outbound", monthlyLeaveCap: 16 },
+  { id: "d10", name: "Reseller", monthlyLeaveCap: 8 },
+  { id: "d11", name: "One Pro", monthlyLeaveCap: 10 },
 ];
 
-export const seedRules: ShrinkageRules = { maxDailyPct: 10, maxMonthlyPct: 10, agentMonthlyLeaveCap: 2 };
+// ─── First names & last names for generating agents ──────────
+const firstNames = [
+  "Sara","Alex","Priya","Marcus","Emily","David","Aisha","Thomas","Sofia","Raj",
+  "Liam","Olivia","Noah","Emma","James","Ava","Benjamin","Isabella","Lucas","Mia",
+  "Henry","Amelia","Sebastian","Harper","Jack","Evelyn","Daniel","Abigail","Matthew","Ella",
+  "Owen","Scarlett","Ryan","Grace","Nathan","Chloe","Carter","Zoe","Dylan","Lily",
+  "Leo","Hannah","Jayden","Nora","Gabriel","Riley","Julian","Aria","Caleb","Layla",
+  "Isaac","Penelope","Luke","Camila","Joshua","Luna","Andrew","Willow","Samuel","Emilia",
+  "Christopher","Stella","Joseph","Aurora","Christian","Hazel","Ezra","Violet","Elijah","Savannah",
+  "Colton","Audrey","Aaron","Brooklyn","Ian","Bella","Connor","Claire","Dominic","Skylar",
+  "Jeremiah","Lucy","Adrian","Paisley","Nolan","Anna","Miles","Caroline","Asher","Genesis",
+  "Robert","Aaliyah","Finn","Kennedy","Jaxon","Kinsley","Silas","Allison","Declan","Maya",
+];
+const lastNames = [
+  "Johnson","Chen","Sharma","Lee","Rodriguez","Kim","Okonkwo","Berg","Rossi","Patel",
+  "Williams","Brown","Davis","Miller","Wilson","Moore","Taylor","Anderson","Thomas","Jackson",
+  "White","Harris","Martin","Garcia","Martinez","Robinson","Clark","Lewis","Walker","Young",
+  "Allen","King","Wright","Lopez","Hill","Scott","Green","Adams","Baker","Nelson",
+  "Carter","Mitchell","Perez","Roberts","Turner","Phillips","Campbell","Parker","Evans","Edwards",
+];
 
+// ─── Generate 100 agents + supervisors + admin ───────────────
+const agentsPerDept: Record<string, number> = {
+  d1: 10, d2: 8, d3: 9, d4: 7, d5: 11, d6: 12, d7: 9, d8: 14, d9: 12, d10: 5, d11: 6,
+};
+
+let userIdx = 0;
+const generatedUsers: User[] = [];
+
+// Supervisors (one per dept)
+const supervisors: User[] = seedDepartments.map((dept, i) => ({
+  id: `sup${i + 1}`,
+  name: `${firstNames[i + 50]} ${lastNames[i + 30]}`,
+  email: `${firstNames[i + 50].toLowerCase()}.${lastNames[i + 30].toLowerCase()}@genco.com`,
+  role: 'supervisor' as const,
+  departmentId: dept.id,
+}));
+
+// Agents
+seedDepartments.forEach(dept => {
+  const count = agentsPerDept[dept.id] || 8;
+  for (let i = 0; i < count; i++) {
+    const fn = firstNames[userIdx % firstNames.length];
+    const ln = lastNames[(userIdx + 7) % lastNames.length];
+    generatedUsers.push({
+      id: `a${userIdx + 1}`,
+      name: `${fn} ${ln}`,
+      email: `${fn.toLowerCase()}.${ln.toLowerCase()}${userIdx}@genco.com`,
+      role: 'agent',
+      departmentId: dept.id,
+    });
+    userIdx++;
+  }
+});
+
+export const seedUsers: User[] = [
+  ...generatedUsers,
+  ...supervisors,
+  { id: "admin1", name: "Admin One", email: "admin@genco.com", role: "admin" },
+  { id: "admin2", name: "Admin Two", email: "admin2@genco.com", role: "admin" },
+];
+
+// ─── Rules & Window ──────────────────────────────────────────
+export const seedRules: ShrinkageRules = { maxDailyPct: 10, maxMonthlyPct: 10, agentMonthlyLeaveCap: 2 };
 export const seedLeaveWindow: LeaveWindow = { open: true, startDay: 22, endDay: 26 };
 
+// ─── Holidays ────────────────────────────────────────────────
 export const seedHolidays: Holiday[] = [
   { id: "h1", name: "Republic Day", date: "2026-01-26", type: "National", allowedShrinkagePct: 15 },
   { id: "h2", name: "Valentine's Day", date: "2026-02-14", type: "Festival" },
@@ -35,13 +95,16 @@ export const seedHolidays: Holiday[] = [
   { id: "h10", name: "Company Foundation Day", date: "2026-06-15", type: "Company" },
 ];
 
+// ─── Schedule (Feb 2026 for all agents) ──────────────────────
 const generateSchedule = (): ScheduleDay[] => {
   const rows: ScheduleDay[] = [];
-  const agents = ["u1", "u2", "u5", "u6", "u7", "u8", "u9"];
+  const agents = generatedUsers.map(u => u.id);
   const shifts = [
     { start: "09:00", end: "18:00" },
     { start: "10:00", end: "19:00" },
     { start: "08:00", end: "17:00" },
+    { start: "06:00", end: "15:00" },
+    { start: "14:00", end: "23:00" },
   ];
   for (let d = 1; d <= 28; d++) {
     const dateStr = `2026-02-${String(d).padStart(2, '0')}`;
@@ -62,97 +125,86 @@ const generateSchedule = (): ScheduleDay[] => {
 
 export const seedSchedule: ScheduleDay[] = generateSchedule();
 
-export const seedAttendance: Attendance[] = [
-  { userId: "u1", date: "2026-02-03", present: false, leaveType: "Unplanned" },
-  { userId: "u2", date: "2026-02-05", present: true },
-  { userId: "u5", date: "2026-02-03", present: true },
-  { userId: "u5", date: "2026-02-04", present: false, leaveType: "Planned" },
-  { userId: "u6", date: "2026-02-06", present: false, leaveType: "Unplanned" },
-  { userId: "u7", date: "2026-02-07", present: true },
-  { userId: "u1", date: "2026-02-10", present: true },
-  { userId: "u2", date: "2026-02-10", present: false, leaveType: "Unplanned" },
-  { userId: "u1", date: "2026-02-12", present: true },
-  { userId: "u6", date: "2026-02-12", present: false, leaveType: "Planned" },
-];
+// ─── Attendance (spread across agents) ───────────────────────
+const generateAttendance = (): Attendance[] => {
+  const rows: Attendance[] = [];
+  const agents = generatedUsers.map(u => u.id);
+  const dates = Array.from({ length: 20 }, (_, i) => `2026-02-${String(i + 1).padStart(2, '0')}`);
+  agents.forEach((uid, idx) => {
+    // Each agent gets 2-4 attendance records
+    const count = 2 + (idx % 3);
+    for (let i = 0; i < count; i++) {
+      const date = dates[(idx * 3 + i * 7) % dates.length];
+      const present = (idx + i) % 4 !== 0;
+      rows.push({
+        userId: uid,
+        date,
+        present,
+        leaveType: present ? undefined : ((idx + i) % 2 === 0 ? 'Planned' : 'Unplanned'),
+      });
+    }
+  });
+  return rows;
+};
 
-export const seedLeaves: LeaveRequest[] = [
-  {
-    id: "l1", requesterId: "u1", departmentId: "d1", type: "Planned",
-    date: "2026-02-20", days: 1, reason: "Personal work — bank visit", status: "PendingSupervisor",
-    history: [{ at: "2026-01-24", by: "u1", action: "Submitted" }],
-  },
-  {
-    id: "l2", requesterId: "u1", departmentId: "d1", type: "Swap",
-    date: "2026-02-22", days: 1, peerId: "u2", reason: "Swap with Alex — family function", status: "PendingPeer",
-    history: [{ at: "2026-01-24", by: "u1", action: "Submitted" }],
-  },
-  {
-    id: "l3", requesterId: "u2", departmentId: "d1", type: "Planned",
-    date: "2026-02-18", days: 1, reason: "Doctor appointment", status: "Approved",
-    history: [
-      { at: "2026-01-23", by: "u2", action: "Submitted" },
-      { at: "2026-01-24", by: "u3", action: "Approved", note: "Approved — low shrinkage on that day" },
-    ],
-  },
-  {
-    id: "l4", requesterId: "u5", departmentId: "d1", type: "Planned",
-    date: "2026-02-25", days: 1, reason: "Passport renewal", status: "PendingSupervisor",
-    history: [{ at: "2026-01-25", by: "u5", action: "Submitted" }],
-  },
-  {
-    id: "l5", requesterId: "u6", departmentId: "d1", type: "Planned",
-    date: "2026-02-20", days: 1, reason: "Wedding ceremony", status: "PendingSupervisor",
-    history: [{ at: "2026-01-24", by: "u6", action: "Submitted" }],
-  },
-  {
-    id: "l6", requesterId: "u7", departmentId: "d1", type: "Transfer",
-    date: "2026-02-21", days: 1, peerId: "u1", reason: "Transfer to Sara — school event", status: "PendingPeer",
-    history: [{ at: "2026-01-25", by: "u7", action: "Submitted" }],
-  },
-  {
-    id: "l7", requesterId: "u1", departmentId: "d1", type: "Planned",
-    date: "2026-01-15", days: 1, reason: "Medical checkup", status: "Approved",
-    history: [
-      { at: "2025-12-23", by: "u1", action: "Submitted" },
-      { at: "2025-12-24", by: "u3", action: "Approved" },
-    ],
-  },
-  {
-    id: "l8", requesterId: "u1", departmentId: "d1", type: "Planned",
-    date: "2025-12-24", days: 1, reason: "Christmas Eve", status: "Approved",
-    history: [
-      { at: "2025-11-24", by: "u1", action: "Submitted" },
-      { at: "2025-11-25", by: "u3", action: "Approved" },
-    ],
-  },
-  {
-    id: "l9", requesterId: "u2", departmentId: "d1", type: "Planned",
-    date: "2026-01-12", days: 1, reason: "Family event", status: "Rejected",
-    history: [
-      { at: "2025-12-24", by: "u2", action: "Submitted" },
-      { at: "2025-12-25", by: "u3", action: "Rejected", note: "High shrinkage day — try another date" },
-    ],
-  },
-  {
-    id: "l10", requesterId: "u5", departmentId: "d1", type: "Swap",
-    date: "2026-02-15", days: 1, peerId: "u6", reason: "Swap with Emily", status: "Approved",
-    history: [
-      { at: "2026-01-22", by: "u5", action: "Submitted" },
-      { at: "2026-01-22", by: "u6", action: "Accepted by Peer" },
-      { at: "2026-01-23", by: "u3", action: "Approved" },
-    ],
-  },
-  {
-    id: "l11", requesterId: "u8", departmentId: "d2", type: "Planned",
-    date: "2026-02-19", days: 1, reason: "Visa appointment", status: "Approved",
-    history: [
-      { at: "2026-01-23", by: "u8", action: "Submitted" },
-      { at: "2026-01-24", by: "u10", action: "Approved" },
-    ],
-  },
-  {
-    id: "l12", requesterId: "u9", departmentId: "d2", type: "Planned",
-    date: "2026-02-26", days: 1, reason: "Moving house", status: "PendingSupervisor",
-    history: [{ at: "2026-01-26", by: "u9", action: "Submitted" }],
-  },
-];
+export const seedAttendance: Attendance[] = generateAttendance();
+
+// ─── Leave Requests (lots of them across all depts) ──────────
+const generateLeaves = (): LeaveRequest[] => {
+  const leaves: LeaveRequest[] = [];
+  let leaveId = 1;
+  const statuses: Array<LeaveRequest['status']> = ['PendingSupervisor', 'Approved', 'Rejected', 'PendingPeer', 'Approved', 'Approved'];
+  const types: Array<LeaveRequest['type']> = ['Planned', 'Planned', 'Swap', 'Transfer', 'Planned', 'Planned'];
+  const reasons = [
+    "Personal work — bank visit", "Doctor appointment", "Family function", "Passport renewal",
+    "Wedding ceremony", "School event", "Medical checkup", "Moving house", "Visa appointment",
+    "Home repair", "Parent-teacher meeting", "Religious ceremony", "Vacation day", "Dental surgery",
+    "Car service appointment", "Government office visit", "Sibling's graduation", "Home delivery",
+    "Festival celebration", "Family emergency", "Court hearing", "Insurance meeting",
+    "Property registration", "Child vaccination", "Airport pickup",
+  ];
+
+  generatedUsers.forEach((user, userIndex) => {
+    // Each agent gets 2-5 leave requests
+    const leaveCount = 2 + (userIndex % 4);
+    for (let i = 0; i < leaveCount; i++) {
+      const status = statuses[(userIndex + i) % statuses.length];
+      const type = types[(userIndex + i) % types.length];
+      const day = 5 + ((userIndex * 3 + i * 4) % 22);
+      const date = `2026-02-${String(day).padStart(2, '0')}`;
+      const submitDay = Math.max(1, day - 10 - (i * 2));
+      const submitDate = `2026-01-${String(submitDay).padStart(2, '0')}`;
+
+      // Find a peer in the same department for swaps/transfers
+      const deptPeers = generatedUsers.filter(u => u.departmentId === user.departmentId && u.id !== user.id);
+      const peer = deptPeers[(userIndex + i) % Math.max(1, deptPeers.length)];
+
+      const history: LeaveRequest['history'] = [{ at: submitDate, by: user.id, action: 'Submitted' }];
+
+      if (status === 'Approved') {
+        const supervisor = supervisors.find(s => s.departmentId === user.departmentId);
+        history.push({ at: `2026-01-${String(submitDay + 1).padStart(2, '0')}`, by: supervisor?.id ?? 'sup1', action: 'Approved', note: 'Approved — within shrinkage limits' });
+      } else if (status === 'Rejected') {
+        const supervisor = supervisors.find(s => s.departmentId === user.departmentId);
+        history.push({ at: `2026-01-${String(submitDay + 1).padStart(2, '0')}`, by: supervisor?.id ?? 'sup1', action: 'Rejected', note: 'High shrinkage day — try another date' });
+      }
+
+      leaves.push({
+        id: `l${leaveId++}`,
+        requesterId: user.id,
+        departmentId: user.departmentId!,
+        type,
+        date,
+        days: 1,
+        reason: reasons[(userIndex + i) % reasons.length],
+        status,
+        peerId: (type === 'Swap' || type === 'Transfer') ? peer?.id : undefined,
+        history,
+      });
+    }
+  });
+
+  return leaves;
+};
+
+export const seedLeaves: LeaveRequest[] = generateLeaves();
