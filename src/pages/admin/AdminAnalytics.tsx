@@ -207,8 +207,8 @@ export default function AdminAnalytics() {
       </motion.div>
 
       {/* ═══ Row 1: Trend + Status Donut ═══ */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
-        <div className="lg:col-span-2 glass-card p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
+        <div className="lg:col-span-2 glass-card-featured p-6">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h3 className="font-bold tracking-heading font-heading text-sm">Monthly Trend Analysis</h3>
