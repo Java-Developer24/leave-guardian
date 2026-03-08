@@ -244,7 +244,7 @@ export default function LandingPage() {
               Launch Dashboard
               <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
             </Link>
-            <a href="#features" className="bg-card/60 backdrop-blur-xl border border-border/60 text-foreground font-semibold px-10 py-4 rounded-2xl text-sm flex items-center gap-2.5 hover:bg-card/80 hover:border-border transition-all group">
+            <a href="#features" className="bg-card/60 backdrop-blur-xl border border-border/60 text-foreground font-semibold px-8 py-3 rounded-2xl text-sm flex items-center gap-2 hover:bg-card/80 hover:border-border transition-all group">
               <Globe size={16} className="text-muted-foreground group-hover:text-primary transition-colors" />
               Explore Features
             </a>
