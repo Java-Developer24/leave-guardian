@@ -167,7 +167,7 @@ export default function AdminAnalytics() {
       <SectionHeader tag="Analytics Dashboard" title="Performance" highlight="Insights" description={`Enterprise analytics across ${departments.length} departments, ${totalAgents} agents, and ${totalLeaves} leave requests.`} />
 
       {/* ═══ Filter Toolbar ═══ */}
-      <div className="glass-card p-4 mb-6 flex flex-col md:flex-row items-start md:items-center gap-3">
+      <div className="glass-card-featured p-5 mb-6 flex flex-col md:flex-row items-start md:items-center gap-4">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-primary/8 flex items-center justify-center border border-primary/10">
             <Filter size={15} className="text-primary" />
@@ -197,7 +197,7 @@ export default function AdminAnalytics() {
       </div>
 
       {/* ═══ KPI Row ═══ */}
-      <motion.div {...staggerContainer} initial="initial" animate="animate" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
+      <motion.div {...staggerContainer} initial="initial" animate="animate" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         <motion.div variants={staggerItem}><KpiCard label="Total Leaves" value={totalLeaves} icon={<Calendar size={20} />} accent="primary" /></motion.div>
         <motion.div variants={staggerItem}><KpiCard label="Approved" value={approved} icon={<CheckCircle size={20} />} accent="success" trend={{ value: `${approvalRate}%`, direction: 'up' }} /></motion.div>
         <motion.div variants={staggerItem}><KpiCard label="Rejected" value={rejected} icon={<XCircle size={20} />} accent="primary" /></motion.div>
@@ -207,8 +207,8 @@ export default function AdminAnalytics() {
       </motion.div>
 
       {/* ═══ Row 1: Trend + Status Donut ═══ */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
-        <div className="lg:col-span-2 glass-card p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
+        <div className="lg:col-span-2 glass-card-featured p-6">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h3 className="font-bold tracking-heading font-heading text-sm">Monthly Trend Analysis</h3>
@@ -240,7 +240,7 @@ export default function AdminAnalytics() {
           </ResponsiveContainer>
         </div>
 
-        <div className="glass-card p-6">
+        <div className="glass-card-featured p-6">
           <h3 className="font-bold tracking-heading font-heading text-sm mb-1">Status Distribution</h3>
           <p className="text-[10px] text-muted-foreground mb-3">Current request breakdown</p>
           <ResponsiveContainer width="100%" height={170}>
@@ -266,8 +266,8 @@ export default function AdminAnalytics() {
       </div>
 
       {/* ═══ Row 2: Risk Dates + Dept Treemap ═══ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-        <div className="glass-card p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+        <div className="glass-card-featured p-6">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h3 className="font-bold tracking-heading font-heading text-sm flex items-center gap-2">
@@ -287,7 +287,7 @@ export default function AdminAnalytics() {
           </ResponsiveContainer>
         </div>
 
-        <div className="glass-card p-6">
+        <div className="glass-card-featured p-6">
           <h3 className="font-bold tracking-heading font-heading text-sm mb-1">Department Heatmap</h3>
           <p className="text-[10px] text-muted-foreground mb-4">Leave volume by department (treemap)</p>
           <ResponsiveContainer width="100%" height={220}>
@@ -297,8 +297,8 @@ export default function AdminAnalytics() {
       </div>
 
       {/* ═══ Row 3: Department Scatter + Leave Types ═══ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-        <div className="glass-card p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+        <div className="glass-card-featured p-6">
           <h3 className="font-bold tracking-heading font-heading text-sm mb-1">Department Efficiency</h3>
           <p className="text-[10px] text-muted-foreground mb-4">Team size vs leaves per agent</p>
           <ResponsiveContainer width="100%" height={240}>
@@ -316,7 +316,7 @@ export default function AdminAnalytics() {
           </ResponsiveContainer>
         </div>
 
-        <div className="glass-card p-6">
+        <div className="glass-card-featured p-6">
           <h3 className="font-bold tracking-heading font-heading text-sm mb-1">Leave Type Breakdown</h3>
           <p className="text-[10px] text-muted-foreground mb-4">Planned vs Swap/Transfer by month</p>
           <ResponsiveContainer width="100%" height={240}>
@@ -335,7 +335,7 @@ export default function AdminAnalytics() {
 
       {/* ═══ Row 4: Department Table + Gauges ═══ */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2 glass-card p-6">
+        <div className="lg:col-span-2 glass-card-featured p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-bold tracking-heading font-heading text-sm">Department Breakdown</h3>

@@ -292,7 +292,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-5 lg:p-6 scrollbar-hidden">
+        <main className="flex-1 overflow-y-auto p-5 md:p-7 lg:p-9 scrollbar-hidden">
           {children}
         </main>
       </div>
