@@ -75,7 +75,7 @@ export default function AgentHome() {
       />
 
       {/* KPI Row */}
-      <motion.div {...staggerContainer} initial="initial" animate="animate" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+      <motion.div {...staggerContainer} initial="initial" animate="animate" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5 mb-7">
         <motion.div variants={staggerItem}><KpiCard label="Total Requests" value={myLeaves.length} icon={<FileText size={20} />} accent="primary" sparkline={monthlyBreakdown.map(m => m.total)} /></motion.div>
         <motion.div variants={staggerItem}><KpiCard label="Approved" value={approved} icon={<CheckCircle size={20} />} accent="success" trend={{ value: `${myLeaves.length > 0 ? Math.round((approved / myLeaves.length) * 100) : 0}%`, direction: 'up' }} /></motion.div>
         <motion.div variants={staggerItem}><KpiCard label="Pending" value={pending} icon={<Clock size={20} />} accent="warning" /></motion.div>
