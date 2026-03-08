@@ -302,11 +302,30 @@ export default function AdminAnalytics() {
           </ResponsiveContainer>
         </div>
 
-        <div className="glass-card-featured p-6">
-          <h3 className="font-bold tracking-heading font-heading text-sm mb-1">Department Heatmap</h3>
-          <p className="text-[10px] text-muted-foreground mb-4">Leave volume by department (treemap)</p>
-          <ResponsiveContainer width="100%" height={220}>
-            <Treemap data={treemapData} dataKey="size" nameKey="name" content={<TreemapContent />} animationDuration={300} />
+        <div className="glass-card-featured p-6 overflow-hidden relative">
+          {/* Decorative corner glow */}
+          <div className="absolute -top-12 -right-12 w-32 h-32 bg-accent/5 rounded-full blur-2xl pointer-events-none" />
+          <div className="flex items-center justify-between mb-5 relative z-10">
+            <div>
+              <h3 className="font-bold tracking-heading font-heading text-sm flex items-center gap-2">
+                <Layers size={14} className="text-accent" /> Department Heatmap
+              </h3>
+              <p className="text-[10px] text-muted-foreground mt-1">Leave volume by department — larger blocks = more leaves</p>
+            </div>
+            <span className="text-[9px] bg-accent/8 text-accent px-2.5 py-1 rounded-full font-bold border border-accent/12">{treemapData.length} depts</span>
+          </div>
+          {/* Mini legend row */}
+          <div className="flex flex-wrap gap-2 mb-4 relative z-10">
+            {treemapData.slice(0, 6).map((d, i) => (
+              <span key={d.name} className="flex items-center gap-1.5 text-[8px] text-muted-foreground/60">
+                <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: DEPT_COLORS[i % DEPT_COLORS.length] }} />
+                {d.name.replace('Messaging - ', 'M-').replace('Messaging ', 'M-')}
+              </span>
+            ))}
+            {treemapData.length > 6 && <span className="text-[8px] text-muted-foreground/30">+{treemapData.length - 6} more</span>}
+          </div>
+          <ResponsiveContainer width="100%" height={240}>
+            <Treemap data={treemapData} dataKey="size" nameKey="name" content={<TreemapContent />} animationDuration={400} />
           </ResponsiveContainer>
         </div>
       </div>
