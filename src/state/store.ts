@@ -50,7 +50,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     await get().loadAll();
   },
 
-  logout: () => set({ currentUser: null }),
+  logout: () => set({ currentUser: null, users: [], departments: [], leaves: [], holidays: [], schedule: [], attendance: [] }),
 
   loadAll: async () => {
     set({ loading: true });

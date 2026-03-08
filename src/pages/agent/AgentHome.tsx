@@ -31,7 +31,7 @@ function QuotaRing({ used, cap }: { used: number; cap: number }) {
           </linearGradient>
         </defs>
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ transform: 'rotate(90deg)' }}>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-xl font-extrabold font-heading">{used}</span>
         <span className="text-[9px] text-muted-foreground font-medium">of {cap}</span>
       </div>

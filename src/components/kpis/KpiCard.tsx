@@ -27,16 +27,23 @@ const iconColorMap: Record<string, string> = {
   info: 'text-info',
 };
 const trendColors: Record<string, string> = {
-  up: 'text-success bg-success/8 border-success/12',
-  down: 'text-destructive bg-destructive/8 border-destructive/12',
+  up: 'text-success bg-success/8 border-success/15',
+  down: 'text-destructive bg-destructive/8 border-destructive/15',
   neutral: 'text-muted-foreground bg-muted/20 border-muted/20',
 };
 const glowMap: Record<string, string> = {
-  primary: '0 0 35px hsla(354, 100%, 64%, 0.07)',
-  accent: '0 0 35px hsla(35, 100%, 60%, 0.07)',
-  success: '0 0 35px hsla(152, 69%, 42%, 0.07)',
-  warning: '0 0 35px hsla(35, 100%, 60%, 0.07)',
-  info: '0 0 35px hsla(215, 100%, 58%, 0.07)',
+  primary: '0 0 40px hsla(354, 100%, 64%, 0.06), 0 4px 24px hsla(0,0%,0%,0.3)',
+  accent: '0 0 40px hsla(35, 100%, 60%, 0.06), 0 4px 24px hsla(0,0%,0%,0.3)',
+  success: '0 0 40px hsla(152, 69%, 42%, 0.06), 0 4px 24px hsla(0,0%,0%,0.3)',
+  warning: '0 0 40px hsla(35, 100%, 60%, 0.06), 0 4px 24px hsla(0,0%,0%,0.3)',
+  info: '0 0 40px hsla(215, 100%, 58%, 0.06), 0 4px 24px hsla(0,0%,0%,0.3)',
+};
+const borderAccentMap: Record<string, string> = {
+  primary: 'hover:border-primary/15',
+  accent: 'hover:border-accent/15',
+  success: 'hover:border-success/15',
+  warning: 'hover:border-warning/15',
+  info: 'hover:border-info/15',
 };
 
 function MiniSparkline({ data, accent }: { data: number[]; accent: string }) {
@@ -61,7 +68,7 @@ function MiniSparkline({ data, accent }: { data: number[]; accent: string }) {
   const c = colorMap[accent] || colorMap.primary;
 
   return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="opacity-50 group-hover:opacity-70 transition-opacity">
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="opacity-40 group-hover:opacity-70 transition-opacity duration-500">
       <defs>
         <linearGradient id={`spark-${accent}`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={c} stopOpacity="0.3" />
@@ -79,12 +86,15 @@ export default function KpiCard({ label, value, icon, accent = 'primary', trend,
   return (
     <motion.div
       {...cardHover}
-      className="glass-card gradient-border p-6 flex flex-col gap-4 group"
+      className={`relative bg-card/60 backdrop-blur-xl border border-border/30 rounded-2xl p-6 flex flex-col gap-4 group transition-all duration-500 ${borderAccentMap[accent]} overflow-hidden`}
       style={{ boxShadow: glowMap[accent] }}
     >
-      <div className="flex items-start justify-between">
+      {/* Subtle top accent line */}
+      <div className="absolute top-0 left-4 right-4 h-[2px] rounded-b-full opacity-30" style={{ background: `var(--gradient-accent-bar)` }} />
+      
+      <div className="flex items-start justify-between relative z-10">
         {icon && (
-          <div className={`kpi-icon ${iconBgMap[accent]}`}>
+          <div className={`kpi-icon ${iconBgMap[accent]} border border-current/5 group-hover:scale-105 transition-transform duration-300`}>
             <span className={iconColorMap[accent]}>{icon}</span>
           </div>
         )}
@@ -97,14 +107,14 @@ export default function KpiCard({ label, value, icon, accent = 'primary', trend,
           </span>
         )}
       </div>
-      <div className="flex items-end justify-between gap-2">
+      <div className="flex items-end justify-between gap-2 relative z-10">
         <div>
-          <span className="text-3xl font-extrabold tracking-heading text-foreground font-heading">{value}</span>
-          {subtitle && <p className="text-[11px] text-muted-foreground/60 mt-1">{subtitle}</p>}
+          <span className="text-3xl font-black tracking-heading text-foreground font-heading">{value}</span>
+          {subtitle && <p className="text-[11px] text-muted-foreground/50 mt-1">{subtitle}</p>}
         </div>
         {sparkline && <MiniSparkline data={sparkline} accent={accent} />}
       </div>
-      <span className="text-[10px] tracking-label uppercase text-muted-foreground font-semibold font-heading">{label}</span>
+      <span className="text-[10px] tracking-label uppercase text-muted-foreground/60 font-semibold font-heading relative z-10">{label}</span>
     </motion.div>
   );
 }
