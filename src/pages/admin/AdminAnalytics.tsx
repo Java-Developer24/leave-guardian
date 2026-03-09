@@ -282,22 +282,45 @@ export default function AdminAnalytics() {
 
       {/* ═══ Row 2: Risk Dates + Dept Treemap ═══ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
-        <div className="glass-card-featured p-6">
-          <div className="flex items-center justify-between mb-5">
+        <div className="glass-card-featured p-6 overflow-hidden relative">
+          {/* Decorative glow */}
+          <div className="absolute -top-10 -left-10 w-28 h-28 bg-warning/6 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
+          <div className="flex items-center justify-between mb-5 relative z-10">
             <div>
               <h3 className="font-bold tracking-heading font-heading text-sm flex items-center gap-2">
                 <AlertTriangle size={14} className="text-warning" /> High-Risk Dates
               </h3>
               <p className="text-[10px] text-muted-foreground mt-1">Dates with most concurrent requests</p>
             </div>
+            <span className="text-[9px] bg-warning/8 text-warning px-2.5 py-1 rounded-full font-bold border border-warning/12">{riskDates.length} flagged</span>
+          </div>
+          {/* Risk summary chips */}
+          <div className="flex flex-wrap gap-2 mb-4 relative z-10">
+            {riskDates.slice(0, 3).map((d, i) => (
+              <span key={d.date} className={`text-[9px] font-bold px-2.5 py-1 rounded-lg border ${i === 0 ? 'bg-destructive/10 text-destructive border-destructive/15' : 'bg-warning/8 text-warning border-warning/12'}`}>
+                {d.date} — {d.requests} req
+              </span>
+            ))}
           </div>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={riskDates} layout="vertical">
+              <defs>
+                <linearGradient id="riskBarGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="hsl(354, 100%, 64%)" stopOpacity={0.7} />
+                  <stop offset="100%" stopColor="hsl(35, 100%, 60%)" stopOpacity={0.4} />
+                </linearGradient>
+              </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="hsla(225,12%,18%,0.3)" horizontal={false} />
               <XAxis type="number" tick={{ fill: 'hsl(225,10%,48%)', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis dataKey="date" type="category" tick={{ fill: 'hsl(225,10%,48%)', fontSize: 10 }} axisLine={false} tickLine={false} width={55} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey="requests" radius={[0, 8, 8, 0]} fill="hsl(354, 100%, 64%)" fillOpacity={0.55} barSize={16} />
+              <YAxis dataKey="date" type="category" tick={{ fill: 'hsl(225,10%,48%)', fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} width={55} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [`${value} requests`, 'Concurrent']} />
+              <Bar dataKey="requests" radius={[0, 10, 10, 0]} fill="url(#riskBarGrad)" barSize={18}>
+                {riskDates.map((entry, idx) => (
+                  <Cell key={idx} fill={entry.requests > 6 ? 'hsl(0, 85%, 60%)' : 'url(#riskBarGrad)'} fillOpacity={entry.requests > 6 ? 0.75 : 0.6} />
+                ))}
+              </Bar>
+              <Line type="monotone" dataKey="shrinkage" stroke="hsl(35, 100%, 60%)" strokeWidth={2} strokeDasharray="4 4" dot={{ r: 3, fill: 'hsl(35, 100%, 60%)' }} />
             </BarChart>
           </ResponsiveContainer>
         </div>
