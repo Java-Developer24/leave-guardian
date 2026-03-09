@@ -34,41 +34,36 @@ const STATUS_COLORS: Record<string, string> = {
   PendingPeer: 'hsl(215, 100%, 58%)',
 };
 
-// Custom Treemap content — enhanced with gradient fills and bold labels
+// Custom Treemap content — clean colored blocks with labels
 function TreemapContent(props: any) {
   const { x, y, width, height, name, value, index } = props;
-  if (width < 30 || height < 25) return null;
+  if (width < 8 || height < 8) return null;
   const color = DEPT_COLORS[index % DEPT_COLORS.length];
+  const shortName = name?.replace('Messaging - ', 'M-').replace('Messaging ', 'M-');
   return (
     <g>
-      <defs>
-        <linearGradient id={`tree-grad-${index}`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity={0.45} />
-          <stop offset="100%" stopColor={color} stopOpacity={0.15} />
-        </linearGradient>
-      </defs>
-      <rect x={x + 1} y={y + 1} width={width - 2} height={height - 2} rx={10}
-        fill={`url(#tree-grad-${index})`}
+      <rect x={x + 2} y={y + 2} width={width - 4} height={height - 4} rx={8}
+        fill={color}
+        fillOpacity={0.22}
         stroke={color}
         strokeWidth={1.5}
-        strokeOpacity={0.5}
+        strokeOpacity={0.4}
       />
-      {/* Inner glow line at top */}
-      {width > 50 && (
-        <rect x={x + 6} y={y + 3} width={Math.min(width * 0.4, 40)} height={2.5} rx={1.5} fill={color} fillOpacity={0.6} />
+      {width > 40 && (
+        <rect x={x + 8} y={y + 6} width={Math.min(width * 0.35, 32)} height={3} rx={1.5} fill={color} fillOpacity={0.7} />
       )}
-      {width > 55 && height > 38 && (
+      {width > 60 && height > 44 && (
         <>
-          <text x={x + 10} y={y + 22} fontSize={11} fontWeight={800} fill="hsl(210,20%,96%)" fontFamily="Space Grotesk" letterSpacing="0.02em">
-            {name?.length > width / 7.5 ? name.slice(0, Math.floor(width / 7.5)) + '…' : name}
+          <text x={x + 10} y={y + 24} fontSize={12} fontWeight={700} fill="hsl(210,20%,96%)" fontFamily="Space Grotesk">
+            {shortName && shortName.length > Math.floor(width / 9) ? shortName.slice(0, Math.floor(width / 9)) + '…' : shortName}
           </text>
-          <text x={x + 10} y={y + 38} fontSize={10} fontWeight={600} fill={color} fontFamily="DM Sans">
+          <text x={x + 10} y={y + 40} fontSize={10} fontWeight={600} fill={color} fontFamily="DM Sans">
             {value} leaves
           </text>
         </>
       )}
-      {width > 55 && height > 55 && (
-        <text x={x + 10} y={y + height - 10} fontSize={20} fontWeight={900} fill={color} fillOpacity={0.2} fontFamily="Space Grotesk">
+      {width > 50 && height > 60 && (
+        <text x={x + 10} y={y + height - 8} fontSize={22} fontWeight={900} fill={color} fillOpacity={0.15} fontFamily="Space Grotesk">
           {value}
         </text>
       )}
