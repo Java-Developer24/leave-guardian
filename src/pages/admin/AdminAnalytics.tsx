@@ -225,28 +225,35 @@ export default function AdminAnalytics() {
               <p className="text-[10px] text-muted-foreground mt-1">Leave volume, approvals & rejections by month</p>
             </div>
             <div className="flex items-center gap-4 text-[9px]">
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'hsl(354, 100%, 64%)' }} />Total</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'hsl(215, 100%, 58%)' }} />Total</span>
               <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'hsl(152, 69%, 42%)' }} />Approved</span>
               <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'hsl(0, 85%, 60%)' }} />Rejected</span>
             </div>
           </div>
           <ResponsiveContainer width="100%" height={260}>
-            <ComposedChart data={monthlyTrend}>
+            <BarChart data={monthlyTrend} barGap={6}>
               <defs>
+                <linearGradient id="approvedGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(152, 69%, 42%)" stopOpacity={0.85} />
+                  <stop offset="100%" stopColor="hsl(152, 69%, 42%)" stopOpacity={0.4} />
+                </linearGradient>
+                <linearGradient id="rejectedGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(0, 85%, 60%)" stopOpacity={0.8} />
+                  <stop offset="100%" stopColor="hsl(0, 85%, 60%)" stopOpacity={0.35} />
+                </linearGradient>
                 <linearGradient id="totalGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(354, 100%, 64%)" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="hsl(354, 100%, 64%)" stopOpacity={0} />
+                  <stop offset="0%" stopColor="hsl(215, 100%, 58%)" stopOpacity={0.7} />
+                  <stop offset="100%" stopColor="hsl(215, 100%, 58%)" stopOpacity={0.25} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="hsla(225,12%,18%,0.3)" />
               <XAxis dataKey="month" tick={{ fill: 'hsl(225,10%,48%)', fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: 'hsl(225,10%,48%)', fontSize: 10 }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={tooltipStyle} />
-              <Area type="monotone" dataKey="total" stroke="hsl(354, 100%, 64%)" fill="url(#totalGrad)" strokeWidth={2.5} />
-              <Bar dataKey="approved" fill="hsl(152, 69%, 42%)" fillOpacity={0.6} radius={[6, 6, 0, 0]} barSize={28} />
-              <Bar dataKey="rejected" fill="hsl(0, 85%, 60%)" fillOpacity={0.5} radius={[6, 6, 0, 0]} barSize={28} />
-              <Line type="monotone" dataKey="pending" stroke="hsl(35, 100%, 60%)" strokeWidth={2} strokeDasharray="4 4" dot={{ r: 4, fill: 'hsl(35, 100%, 60%)' }} />
-            </ComposedChart>
+              <Bar dataKey="total" name="Total" fill="url(#totalGrad)" radius={[6, 6, 0, 0]} barSize={32} />
+              <Bar dataKey="approved" name="Approved" fill="url(#approvedGrad)" radius={[6, 6, 0, 0]} barSize={32} />
+              <Bar dataKey="rejected" name="Rejected" fill="url(#rejectedGrad)" radius={[6, 6, 0, 0]} barSize={32} />
+            </BarChart>
           </ResponsiveContainer>
         </div>
 
