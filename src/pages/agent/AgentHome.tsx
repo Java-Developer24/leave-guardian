@@ -7,7 +7,7 @@ import SectionHeader from '@/components/SectionHeader';
 import StatusChip from '@/components/StatusChip';
 import { Link } from 'react-router-dom';
 import { formatDate } from '@/core/utils/dates';
-import { Calendar, FileText, ArrowLeftRight, Clock, CheckCircle, XCircle, Send, Activity, Sparkles, BarChart3, Users, Zap, TrendingUp } from 'lucide-react';
+import { Calendar, FileText, ArrowLeftRight, Clock, CheckCircle, XCircle, Send, Activity, Sparkles, BarChart3, Zap, TrendingUp } from 'lucide-react';
 
 function QuotaRing({ used, cap }: { used: number; cap: number }) {
   const pct = Math.min(100, (used / cap) * 100);
