@@ -224,27 +224,6 @@ export default function AgentHome() {
             )}
           </div>
 
-          <div className="glass-card p-5">
-            <h2 className="text-xs font-bold tracking-heading mb-3 font-heading flex items-center gap-2">
-              <Users size={13} className="text-info" /> Team Members
-            </h2>
-            <div className="space-y-2">
-              {teamPeers.map(peer => {
-                const peerLeaves = leaves.filter(l => l.requesterId === peer.id && l.status === 'Approved').length;
-                return (
-                  <div key={peer.id} className="flex items-center justify-between p-2.5 rounded-xl hover:bg-card/50 transition-colors">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/10 to-accent/5 flex items-center justify-center text-[8px] font-bold text-primary border border-primary/8">
-                        {peer.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                      </div>
-                      <span className="text-xs font-medium truncate max-w-[110px]">{peer.name}</span>
-                    </div>
-                    <span className="text-[10px] text-muted-foreground bg-secondary/30 px-2 py-0.5 rounded-md">{peerLeaves} leaves</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
         </div>
       </div>
     </motion.div>
