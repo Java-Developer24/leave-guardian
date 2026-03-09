@@ -34,41 +34,36 @@ const STATUS_COLORS: Record<string, string> = {
   PendingPeer: 'hsl(215, 100%, 58%)',
 };
 
-// Custom Treemap content — enhanced with gradient fills and bold labels
+// Custom Treemap content — clean colored blocks with labels
 function TreemapContent(props: any) {
   const { x, y, width, height, name, value, index } = props;
-  if (width < 30 || height < 25) return null;
+  if (width < 8 || height < 8) return null;
   const color = DEPT_COLORS[index % DEPT_COLORS.length];
+  const shortName = name?.replace('Messaging - ', 'M-').replace('Messaging ', 'M-');
   return (
     <g>
-      <defs>
-        <linearGradient id={`tree-grad-${index}`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity={0.45} />
-          <stop offset="100%" stopColor={color} stopOpacity={0.15} />
-        </linearGradient>
-      </defs>
-      <rect x={x + 1} y={y + 1} width={width - 2} height={height - 2} rx={10}
-        fill={`url(#tree-grad-${index})`}
+      <rect x={x + 2} y={y + 2} width={width - 4} height={height - 4} rx={8}
+        fill={color}
+        fillOpacity={0.22}
         stroke={color}
         strokeWidth={1.5}
-        strokeOpacity={0.5}
+        strokeOpacity={0.4}
       />
-      {/* Inner glow line at top */}
-      {width > 50 && (
-        <rect x={x + 6} y={y + 3} width={Math.min(width * 0.4, 40)} height={2.5} rx={1.5} fill={color} fillOpacity={0.6} />
+      {width > 40 && (
+        <rect x={x + 8} y={y + 6} width={Math.min(width * 0.35, 32)} height={3} rx={1.5} fill={color} fillOpacity={0.7} />
       )}
-      {width > 55 && height > 38 && (
+      {width > 60 && height > 44 && (
         <>
-          <text x={x + 10} y={y + 22} fontSize={11} fontWeight={800} fill="hsl(210,20%,96%)" fontFamily="Space Grotesk" letterSpacing="0.02em">
-            {name?.length > width / 7.5 ? name.slice(0, Math.floor(width / 7.5)) + '…' : name}
+          <text x={x + 10} y={y + 24} fontSize={12} fontWeight={700} fill="hsl(210,20%,96%)" fontFamily="Space Grotesk">
+            {shortName && shortName.length > Math.floor(width / 9) ? shortName.slice(0, Math.floor(width / 9)) + '…' : shortName}
           </text>
-          <text x={x + 10} y={y + 38} fontSize={10} fontWeight={600} fill={color} fontFamily="DM Sans">
+          <text x={x + 10} y={y + 40} fontSize={10} fontWeight={600} fill={color} fontFamily="DM Sans">
             {value} leaves
           </text>
         </>
       )}
-      {width > 55 && height > 55 && (
-        <text x={x + 10} y={y + height - 10} fontSize={20} fontWeight={900} fill={color} fillOpacity={0.2} fontFamily="Space Grotesk">
+      {width > 50 && height > 60 && (
+        <text x={x + 10} y={y + height - 8} fontSize={22} fontWeight={900} fill={color} fillOpacity={0.15} fontFamily="Space Grotesk">
           {value}
         </text>
       )}
@@ -230,28 +225,35 @@ export default function AdminAnalytics() {
               <p className="text-[10px] text-muted-foreground mt-1">Leave volume, approvals & rejections by month</p>
             </div>
             <div className="flex items-center gap-4 text-[9px]">
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'hsl(354, 100%, 64%)' }} />Total</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'hsl(215, 100%, 58%)' }} />Total</span>
               <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'hsl(152, 69%, 42%)' }} />Approved</span>
               <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'hsl(0, 85%, 60%)' }} />Rejected</span>
             </div>
           </div>
           <ResponsiveContainer width="100%" height={260}>
-            <ComposedChart data={monthlyTrend}>
+            <BarChart data={monthlyTrend} barGap={6}>
               <defs>
+                <linearGradient id="approvedGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(152, 69%, 42%)" stopOpacity={0.85} />
+                  <stop offset="100%" stopColor="hsl(152, 69%, 42%)" stopOpacity={0.4} />
+                </linearGradient>
+                <linearGradient id="rejectedGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(0, 85%, 60%)" stopOpacity={0.8} />
+                  <stop offset="100%" stopColor="hsl(0, 85%, 60%)" stopOpacity={0.35} />
+                </linearGradient>
                 <linearGradient id="totalGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(354, 100%, 64%)" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="hsl(354, 100%, 64%)" stopOpacity={0} />
+                  <stop offset="0%" stopColor="hsl(215, 100%, 58%)" stopOpacity={0.7} />
+                  <stop offset="100%" stopColor="hsl(215, 100%, 58%)" stopOpacity={0.25} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="hsla(225,12%,18%,0.3)" />
               <XAxis dataKey="month" tick={{ fill: 'hsl(225,10%,48%)', fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: 'hsl(225,10%,48%)', fontSize: 10 }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={tooltipStyle} />
-              <Area type="monotone" dataKey="total" stroke="hsl(354, 100%, 64%)" fill="url(#totalGrad)" strokeWidth={2.5} />
-              <Bar dataKey="approved" fill="hsl(152, 69%, 42%)" fillOpacity={0.6} radius={[6, 6, 0, 0]} barSize={28} />
-              <Bar dataKey="rejected" fill="hsl(0, 85%, 60%)" fillOpacity={0.5} radius={[6, 6, 0, 0]} barSize={28} />
-              <Line type="monotone" dataKey="pending" stroke="hsl(35, 100%, 60%)" strokeWidth={2} strokeDasharray="4 4" dot={{ r: 4, fill: 'hsl(35, 100%, 60%)' }} />
-            </ComposedChart>
+              <Bar dataKey="total" name="Total" fill="url(#totalGrad)" radius={[6, 6, 0, 0]} barSize={32} />
+              <Bar dataKey="approved" name="Approved" fill="url(#approvedGrad)" radius={[6, 6, 0, 0]} barSize={32} />
+              <Bar dataKey="rejected" name="Rejected" fill="url(#rejectedGrad)" radius={[6, 6, 0, 0]} barSize={32} />
+            </BarChart>
           </ResponsiveContainer>
         </div>
 
@@ -356,44 +358,41 @@ export default function AdminAnalytics() {
       {/* ═══ Row 3: Department Scatter + Leave Types ═══ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
         <div className="glass-card-featured p-6 overflow-hidden relative">
-          {/* Decorative glows */}
           <div className="absolute -bottom-10 -left-10 w-28 h-28 bg-info/5 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -top-8 -right-8 w-20 h-20 bg-primary/4 rounded-full blur-2xl pointer-events-none" />
           <div className="flex items-center justify-between mb-1 relative z-10">
             <h3 className="font-bold tracking-heading font-heading text-sm flex items-center gap-2">
               <Target size={14} className="text-info" /> Department Efficiency
             </h3>
             <span className="text-[9px] bg-info/8 text-info px-2.5 py-1 rounded-full font-bold border border-info/12">{deptScatter.length} depts</span>
           </div>
-          <p className="text-[10px] text-muted-foreground mb-3 relative z-10">Team size vs leaves per agent — bubble color = department</p>
-          {/* Mini dept legend */}
+          <p className="text-[10px] text-muted-foreground mb-3 relative z-10">Leaves per agent by department — line shows shrinkage trend</p>
           <div className="flex flex-wrap gap-2 mb-4 relative z-10">
-            {deptScatter.slice(0, 5).map((d, i) => (
+            {deptScatter.map((d) => (
               <span key={d.name} className="flex items-center gap-1.5 text-[8px] text-muted-foreground/60">
                 <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: d.color, boxShadow: `0 0 6px ${d.color}44` }} />
                 {d.name}
               </span>
             ))}
-            {deptScatter.length > 5 && <span className="text-[8px] text-muted-foreground/30">+{deptScatter.length - 5}</span>}
           </div>
-          <ResponsiveContainer width="100%" height={240}>
-            <ComposedChart data={deptScatter}>
+          <ResponsiveContainer width="100%" height={260}>
+            <ComposedChart data={deptScatter} margin={{ bottom: 20, left: 10 }}>
               <defs>
-                <linearGradient id="effBg" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(215,100%,58%)" stopOpacity={0.04} />
+                <linearGradient id="effAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(215,100%,58%)" stopOpacity={0.08} />
                   <stop offset="100%" stopColor="transparent" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsla(225,12%,18%,0.3)" />
-              <XAxis dataKey="agents" tick={{ fill: 'hsl(225,10%,48%)', fontSize: 10 }} axisLine={false} tickLine={false} label={{ value: 'Team Size', fontSize: 9, fill: 'hsl(225,10%,48%)', position: 'bottom', offset: -5 }} />
-              <YAxis dataKey="leavesPerAgent" tick={{ fill: 'hsl(225,10%,48%)', fontSize: 10 }} axisLine={false} tickLine={false} label={{ value: 'Leaves/Agent', fontSize: 9, fill: 'hsl(225,10%,48%)', angle: -90, position: 'insideLeft' }} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(value: number, name: string) => [value, name === 'leavesPerAgent' ? 'Leaves/Agent' : name]} />
-              <Area type="monotone" dataKey="leavesPerAgent" fill="url(#effBg)" stroke="none" />
-              <Scatter dataKey="leavesPerAgent" fill="hsl(354, 100%, 64%)" fillOpacity={0.8}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsla(225,12%,18%,0.25)" />
+              <XAxis dataKey="name" tick={{ fill: 'hsl(225,10%,48%)', fontSize: 9 }} axisLine={false} tickLine={false} angle={-25} textAnchor="end" height={50} />
+              <YAxis tick={{ fill: 'hsl(225,10%,48%)', fontSize: 10 }} axisLine={false} tickLine={false} label={{ value: 'Leaves/Agent', fontSize: 9, fill: 'hsl(225,10%,48%)', angle: -90, position: 'insideLeft' }} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(value: number, name: string) => [value, name === 'leavesPerAgent' ? 'Leaves/Agent' : name === 'shrinkage' ? 'Shrinkage %' : name]} />
+              <Area type="monotone" dataKey="leavesPerAgent" fill="url(#effAreaGrad)" stroke="none" />
+              <Bar dataKey="leavesPerAgent" name="Leaves/Agent" barSize={22} radius={[6, 6, 0, 0]} fillOpacity={0.7}>
                 {deptScatter.map((entry, idx) => (
-                  <Cell key={idx} fill={entry.color} stroke={entry.color} strokeWidth={2} strokeOpacity={0.3} r={8} />
+                  <Cell key={idx} fill={entry.color} />
                 ))}
-              </Scatter>
+              </Bar>
+              <Line type="monotone" dataKey="shrinkage" name="Shrinkage %" stroke="hsl(35, 100%, 60%)" strokeWidth={2} strokeDasharray="5 3" dot={{ r: 4, fill: 'hsl(35, 100%, 60%)', stroke: 'hsl(225,15%,9%)', strokeWidth: 2 }} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
