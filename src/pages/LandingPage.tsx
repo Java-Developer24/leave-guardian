@@ -514,8 +514,7 @@ export default function LandingPage() {
           </div>
           <div className="relative text-center p-14 md:p-24">
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-accent to-info" />
-            <div className="glow-orb w-56 h-56 bg-primary/10 -top-28 -right-28" />
-            <div className="glow-orb w-40 h-40 bg-accent/8 -bottom-20 -left-20" />
+            
             <div className="relative z-10">
               <h2 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-heading font-heading leading-tight">
                 Ready to <span className="gradient-text">Transform</span>
