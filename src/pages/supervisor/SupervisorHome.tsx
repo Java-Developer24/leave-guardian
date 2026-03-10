@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { pageTransition, staggerContainer, staggerItem } from '@/styles/motion';
 import { useAppStore } from '@/state/store';
@@ -8,31 +8,15 @@ import StatusChip from '@/components/StatusChip';
 import { Link } from 'react-router-dom';
 import { calcDailyShrinkage } from '@/core/utils/shrinkage';
 import { toDateStr, formatDate } from '@/core/utils/dates';
-import { TrendingUp, CheckSquare, AlertTriangle, Users, Clock, Calendar, Gauge, Shield, Zap, Target } from 'lucide-react';
-
-function MiniDonut({ pct, color, size = 80 }: { pct: number; color: string; size?: number }) {
-  const r = (size - 12) / 2;
-  const circ = 2 * Math.PI * r;
-  const offset = circ - (pct / 100) * circ;
-  return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full stat-ring">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="hsl(var(--secondary))" strokeWidth="5" />
-        <motion.circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth="5" strokeLinecap="round"
-          strokeDasharray={circ} strokeDashoffset={circ} animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 1, delay: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-lg font-extrabold font-heading">{pct}%</span>
-      </div>
-    </div>
-  );
-}
+import { showToast } from '@/components/toasts/ToastContainer';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { TrendingUp, CheckSquare, AlertTriangle, Users, Clock, Calendar, Gauge, Shield, Target, Check, X } from 'lucide-react';
 
 export default function SupervisorHome() {
-  const { leaves, schedule, rules, currentUser, users } = useAppStore();
+  const { leaves, schedule, rules, currentUser, users, repo, departments } = useAppStore();
+  const refreshLeaves = useAppStore(s => s.refreshLeaves);
   const deptId = currentUser?.departmentId ?? 'd1';
+  const myDept = departments.find(d => d.id === deptId);
 
   const deptLeaves = leaves.filter(l => l.departmentId === deptId);
   const approvedCount = deptLeaves.filter(l => l.status === 'Approved').length;
@@ -42,148 +26,188 @@ export default function SupervisorHome() {
   const todayStr = toDateStr(new Date());
   const currentShrinkage = calcDailyShrinkage(todayStr, deptLeaves, schedule);
   const pending = deptLeaves.filter(l => l.status === 'PendingSupervisor');
-  const teamSize = users.filter(u => u.role === 'agent' && u.departmentId === deptId).length;
+  const teamAgents = users.filter(u => u.role === 'agent' && u.departmentId === deptId);
+  const teamSize = teamAgents.length;
   const getUserName = (id: string) => users.find(u => u.id === id)?.name ?? id;
   const getInitials = (id: string) => getUserName(id).split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
-  const upcomingDates = useMemo(() => {
-    const dateMap: Record<string, number> = {};
-    pending.forEach(l => { dateMap[l.date] = (dateMap[l.date] || 0) + 1; });
-    return Object.entries(dateMap).sort(([a], [b]) => a.localeCompare(b)).slice(0, 5);
-  }, [pending]);
+  // Working hours mock
+  const totalWorkHrs = teamSize * 8;
+  const currentWorkHrs = Math.round(totalWorkHrs * (1 - currentShrinkage / 100));
 
-  const topAgents = useMemo(() => {
-    const agentMap: Record<string, number> = {};
-    deptLeaves.filter(l => l.status === 'Approved').forEach(l => { agentMap[l.requesterId] = (agentMap[l.requesterId] || 0) + 1; });
-    return Object.entries(agentMap).sort(([, a], [, b]) => b - a).slice(0, 5);
-  }, [deptLeaves]);
+  const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
+
+  const handleApprove = async (id: string) => {
+    await repo.updateLeave(id, { status: 'Approved' });
+    await refreshLeaves();
+    showToast('Leave approved', 'success');
+  };
+
+  const handleReject = async (id: string) => {
+    await repo.updateLeave(id, { status: 'Rejected' });
+    await refreshLeaves();
+    showToast('Leave rejected', 'success');
+  };
+
+  // Team leave summary
+  const teamSummary = useMemo(() => {
+    return teamAgents.map(agent => {
+      const agentLeaves = deptLeaves.filter(l => l.requesterId === agent.id);
+      const planned = agentLeaves.filter(l => l.type === 'Planned').length;
+      const unplanned = agentLeaves.filter(l => l.type === 'Unplanned').length;
+      const approved = agentLeaves.filter(l => l.status === 'Approved').length;
+      const pendingCount = agentLeaves.filter(l => ['PendingSupervisor', 'PendingPeer'].includes(l.status)).length;
+      return { id: agent.id, name: agent.name, planned, unplanned, approved, pending: pendingCount, workHrs: 8 * 20 - approved * 8 };
+    }).slice(0, 15);
+  }, [teamAgents, deptLeaves]);
 
   return (
     <motion.div {...pageTransition}>
-      <SectionHeader tag="Supervisor Dashboard" title="Team" highlight="Overview"
-        description="Monitor leave activity, shrinkage levels, and pending approvals for your department."
-        action={<Link to="/supervisor/approvals" className="btn-primary-gradient text-primary-foreground font-bold px-5 py-2.5 rounded-xl text-sm flex items-center gap-2"><CheckSquare size={15} /> Review Approvals</Link>}
-      />
+      {/* Welcome Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-extrabold tracking-heading font-heading">
+          Welcome, <span className="text-primary">{currentUser?.name}</span> <span className="text-muted-foreground text-lg">(Supervisor)</span>
+        </h1>
+        <p className="text-xs text-muted-foreground mt-1">{myDept?.name ?? 'Department'}</p>
+      </div>
 
       {/* KPIs */}
-      <motion.div {...staggerContainer} initial="initial" animate="animate" className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-7">
-        <motion.div variants={staggerItem}><KpiCard label="Approval Rate" value={`${approvalRate}%`} icon={<TrendingUp size={20} />} accent="success" sparkline={[65, 72, 80, 78, 85, 87]} /></motion.div>
-        <motion.div variants={staggerItem}><KpiCard label="Today's Shrinkage" value={`${currentShrinkage.toFixed(1)}%`} icon={<Gauge size={20} />} accent={currentShrinkage > rules.maxDailyPct ? 'primary' : 'info'} subtitle={`Cap: ${rules.maxDailyPct}%`} /></motion.div>
-        <motion.div variants={staggerItem}><KpiCard label="Pending Queue" value={pending.length} icon={<Clock size={20} />} accent="warning" /></motion.div>
-        <motion.div variants={staggerItem}><KpiCard label="Team Size" value={teamSize} icon={<Users size={20} />} accent="accent" /></motion.div>
+      <motion.div {...staggerContainer} initial="initial" animate="animate" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+        <motion.div variants={staggerItem}><KpiCard label="Pending Request" value={pending.length} icon={<Clock size={18} />} accent="warning" /></motion.div>
+        <motion.div variants={staggerItem}><KpiCard label="Approval Rate" value={`${approvalRate}%`} icon={<TrendingUp size={18} />} accent="success" /></motion.div>
+        <motion.div variants={staggerItem}><KpiCard label="Team Working Hours" value={`${currentWorkHrs}/${totalWorkHrs}`} icon={<Calendar size={18} />} accent="info" subtitle="hrs today" /></motion.div>
+        <motion.div variants={staggerItem}><KpiCard label="Team Size" value={teamSize} icon={<Users size={18} />} accent="accent" /></motion.div>
+        <motion.div variants={staggerItem}><KpiCard label="Shrinkage Level" value={`${currentShrinkage.toFixed(1)}%`} icon={<Gauge size={18} />} accent={currentShrinkage > rules.maxDailyPct ? 'primary' : 'info'} subtitle={`Cap: ${rules.maxDailyPct}%`} /></motion.div>
       </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Pending Approvals */}
-        <div className="lg:col-span-2 glass-card-featured overflow-hidden">
-          <div className="px-6 py-4 border-b border-border/15 flex items-center justify-between bg-gradient-to-r from-warning/3 to-transparent">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center border border-warning/12">
-                <Clock size={18} className="text-warning" />
-              </div>
-              <div>
-                <h2 className="text-sm font-bold tracking-heading font-heading">Pending Approvals</h2>
-                <p className="text-[10px] text-muted-foreground">{pending.length} requests need your action</p>
-              </div>
-            </div>
-            <Link to="/supervisor/approvals" className="text-[10px] text-primary font-bold hover:underline flex items-center gap-1">View all →</Link>
+      {/* Pending Leave Requests */}
+      <div className="mb-6">
+        <h2 className="text-base font-bold font-heading mb-4 flex items-center gap-2">
+          <Clock size={16} className="text-warning" /> Pending Leave Requests
+          <span className="text-xs text-muted-foreground font-normal ml-2">{pending.length} requests need your action</span>
+        </h2>
+
+        {pending.length === 0 ? (
+          <div className="bg-card border border-border rounded-xl py-12 text-center">
+            <CheckSquare size={28} className="mx-auto mb-3 text-success/30" />
+            <p className="text-sm text-muted-foreground font-medium">All caught up! No pending approvals.</p>
           </div>
-          {pending.length === 0 ? (
-            <div className="py-14 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-success/6 flex items-center justify-center mx-auto mb-4 border border-success/10">
-                <CheckSquare size={28} className="text-success/30" />
-              </div>
-              <p className="text-sm text-muted-foreground font-medium">All caught up!</p>
-              <p className="text-[10px] text-muted-foreground/40 mt-1">No pending approvals</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-border/10">
-              {pending.slice(0, 12).map((l, i) => (
-                <motion.div key={l.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
-                  className="px-6 py-3.5 flex items-center justify-between table-row-hover"
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {pending.slice(0, 8).map((l, i) => {
+              const potentialShrinkage = currentShrinkage + 1.2;
+              const isHighRisk = potentialShrinkage > rules.maxDailyPct * 0.8;
+              return (
+                <motion.div key={l.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                  className="bg-card border border-border rounded-xl p-5 space-y-3"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/12 to-accent/6 flex items-center justify-center text-[10px] font-bold text-primary border border-primary/10">
-                      {getInitials(l.requesterId)}
+                  {/* Agent Info */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-xs font-bold text-primary border border-primary/15">
+                        {getInitials(l.requesterId)}
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold">{getUserName(l.requesterId)}</div>
+                        <div className="text-[10px] text-muted-foreground">{formatDate(l.date)} • {l.type}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="text-sm font-semibold">{getUserName(l.requesterId)}</div>
-                      <div className="text-[10px] text-muted-foreground">{formatDate(l.date)} • {l.type}</div>
+                    <StatusChip status={l.status} />
+                  </div>
+
+                  {/* Details */}
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="bg-muted/30 rounded-lg p-2 border border-border">
+                      <span className="text-muted-foreground block text-[9px]">Date</span>
+                      <span className="font-semibold">{formatDate(l.date)}</span>
+                    </div>
+                    <div className="bg-muted/30 rounded-lg p-2 border border-border">
+                      <span className="text-muted-foreground block text-[9px]">Leave Type</span>
+                      <span className="font-semibold">{l.type}</span>
+                    </div>
+                    <div className="bg-muted/30 rounded-lg p-2 border border-border">
+                      <span className="text-muted-foreground block text-[9px]">Reason</span>
+                      <span className="font-semibold truncate block">{l.reason || '—'}</span>
                     </div>
                   </div>
-                  <StatusChip status={l.status} />
+
+                  {/* Shrinkage Warning */}
+                  <div className={`flex items-center gap-2 p-2.5 rounded-lg border text-xs ${isHighRisk ? 'bg-destructive/5 border-destructive/15 text-destructive' : 'bg-warning/5 border-warning/15 text-warning'}`}>
+                    <AlertTriangle size={13} />
+                    <span>Current Shrinkage: <strong>{currentShrinkage.toFixed(1)}%</strong></span>
+                    <span className="mx-1">•</span>
+                    <span>Approving leads to <strong>{potentialShrinkage.toFixed(1)}%</strong></span>
+                  </div>
+
+                  {/* Review Notes */}
+                  <textarea
+                    value={reviewNotes[l.id] || ''}
+                    onChange={e => setReviewNotes(prev => ({ ...prev, [l.id]: e.target.value }))}
+                    placeholder="Review notes (optional)..."
+                    rows={2}
+                    className="glass-input text-xs resize-none"
+                  />
+
+                  {/* Actions */}
+                  <div className="flex gap-2">
+                    <button onClick={() => handleApprove(l.id)}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-success/10 text-success border border-success/20 rounded-xl text-xs font-bold hover:bg-success/20 transition-colors"
+                    >
+                      <Check size={14} /> Approve
+                    </button>
+                    <button onClick={() => handleReject(l.id)}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-destructive/5 text-destructive border border-destructive/15 rounded-xl text-xs font-bold hover:bg-destructive/10 transition-colors"
+                    >
+                      <X size={14} /> Reject
+                    </button>
+                  </div>
                 </motion.div>
-              ))}
-            </div>
-          )}
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Team Leave Summary Table */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
+          <h2 className="text-sm font-bold font-heading flex items-center gap-2">
+            <Users size={15} className="text-info" /> Team Leave Summary
+          </h2>
+          <Link to="/supervisor/team" className="text-[10px] text-primary font-bold hover:underline">View full team →</Link>
         </div>
-
-        {/* Right Panel */}
-        <div className="space-y-4">
-          {/* Approval Donut */}
-          <div className="glass-card gradient-border p-6 text-center">
-            <h3 className="text-xs font-bold tracking-heading mb-4 font-heading flex items-center justify-center gap-2">
-              <Target size={13} className="text-success" /> Approval Rate
-            </h3>
-            <div className="flex justify-center mb-3">
-              <MiniDonut pct={approvalRate} color="hsl(152, 69%, 42%)" />
-            </div>
-            <p className="text-xs text-muted-foreground">{approvedCount} approved / {totalDecided} decided</p>
-          </div>
-
-          {/* Risk Dates */}
-          <div className="glass-card accent-top-card p-5">
-            <h2 className="text-xs font-bold tracking-heading mb-4 flex items-center gap-2 font-heading">
-              <AlertTriangle size={13} className="text-warning" /> Risk Dates
-            </h2>
-            {upcomingDates.length === 0 ? <p className="text-xs text-muted-foreground/40 text-center py-3">No risk dates</p> : (
-              <div className="space-y-2">
-                {upcomingDates.map(([date, count]) => (
-                  <div key={date} className="flex items-center justify-between p-3 rounded-xl bg-card/50 border border-border/15 hover:border-warning/20 transition-colors">
-                    <div className="flex items-center gap-2.5">
-                      <Calendar size={13} className="text-warning" />
-                      <span className="text-xs font-medium">{formatDate(date)}</span>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm premium-table">
+            <thead>
+              <tr>
+                <th>Agent Name</th>
+                <th>Planned Leave</th>
+                <th>Unplanned Leave</th>
+                <th>Approved Leave</th>
+                <th>Pending Leave</th>
+                <th>Working Hours (hrs)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {teamSummary.map((agent, i) => (
+                <motion.tr key={agent.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}>
+                  <td>
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-[9px] font-bold text-primary border border-primary/15">
+                        {agent.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                      </div>
+                      <span className="font-semibold">{agent.name}</span>
                     </div>
-                    <span className="text-[10px] bg-warning/10 text-warning px-2.5 py-1 rounded-full font-bold border border-warning/12">{count} reqs</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Top Leave Takers */}
-          <div className="glass-card p-5">
-            <h2 className="text-xs font-bold tracking-heading mb-3 flex items-center gap-2 font-heading">
-              <Zap size={13} className="text-accent" /> Top Leave Takers
-            </h2>
-            <div className="space-y-2">
-              {topAgents.map(([id, count], i) => (
-                <div key={id} className="flex items-center justify-between p-2.5 rounded-xl hover:bg-card/50 transition-colors">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-[9px] font-bold text-muted-foreground/30 w-4">#{i + 1}</span>
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/10 to-accent/5 flex items-center justify-center text-[8px] font-bold text-primary border border-primary/8">
-                      {getInitials(id)}
-                    </div>
-                    <span className="text-xs font-medium truncate max-w-[100px]">{getUserName(id)}</span>
-                  </div>
-                  <span className="text-xs font-bold text-foreground bg-secondary/30 px-2.5 py-0.5 rounded-md">{count}</span>
-                </div>
+                  </td>
+                  <td>{agent.planned}</td>
+                  <td>{agent.unplanned}</td>
+                  <td className="text-success font-semibold">{agent.approved}</td>
+                  <td>{agent.pending > 0 ? <span className="text-warning font-bold">{agent.pending}</span> : '0'}</td>
+                  <td>{agent.workHrs}</td>
+                </motion.tr>
               ))}
-            </div>
-          </div>
-
-          {/* Shrinkage Alert */}
-          {currentShrinkage > rules.maxDailyPct * 0.7 && (
-            <div className="glass-card p-4 animate-border-glow flex items-start gap-3 bg-gradient-to-r from-warning/4 to-transparent">
-              <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center border border-warning/12 flex-shrink-0">
-                <Shield size={16} className="text-warning" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold">Shrinkage Alert</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{currentShrinkage.toFixed(1)}% / {rules.maxDailyPct}% cap — approaching threshold</p>
-              </div>
-            </div>
-          )}
+            </tbody>
+          </table>
         </div>
       </div>
     </motion.div>

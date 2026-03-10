@@ -11,10 +11,10 @@ import AgentRequests from '@/pages/agent/AgentRequests';
 import SupervisorHome from '@/pages/supervisor/SupervisorHome';
 import SupervisorApprovals from '@/pages/supervisor/SupervisorApprovals';
 import SupervisorTeam from '@/pages/supervisor/SupervisorTeam';
+import SupervisorAnalytics from '@/pages/supervisor/SupervisorAnalytics';
 import AdminScheduleUpload from '@/pages/admin/uploads/AdminScheduleUpload';
 import AdminAttendanceUpload from '@/pages/admin/uploads/AdminAttendanceUpload';
-import AdminLeaveWindow from '@/pages/admin/config/AdminLeaveWindow';
-import AdminShrinkage from '@/pages/admin/config/AdminShrinkage';
+import AdminConfig from '@/pages/admin/config/AdminConfig';
 import AdminHolidays from '@/pages/admin/config/AdminHolidays';
 import AdminAnalytics from '@/pages/admin/AdminAnalytics';
 
@@ -40,11 +40,11 @@ export default function AppRouter() {
         <Route path="/supervisor/home" element={<RoleGuard role="supervisor"><SupervisorHome /></RoleGuard>} />
         <Route path="/supervisor/approvals" element={<RoleGuard role="supervisor"><SupervisorApprovals /></RoleGuard>} />
         <Route path="/supervisor/team" element={<RoleGuard role="supervisor"><SupervisorTeam /></RoleGuard>} />
+        <Route path="/supervisor/analytics" element={<RoleGuard role="supervisor"><SupervisorAnalytics /></RoleGuard>} />
 
         <Route path="/admin/uploads/schedule" element={<RoleGuard role="admin"><AdminScheduleUpload /></RoleGuard>} />
         <Route path="/admin/uploads/attendance" element={<RoleGuard role="admin"><AdminAttendanceUpload /></RoleGuard>} />
-        <Route path="/admin/config/leave-window" element={<RoleGuard role="admin"><AdminLeaveWindow /></RoleGuard>} />
-        <Route path="/admin/config/shrinkage" element={<RoleGuard role="admin"><AdminShrinkage /></RoleGuard>} />
+        <Route path="/admin/config" element={<RoleGuard role="admin"><AdminConfig /></RoleGuard>} />
         <Route path="/admin/config/holidays" element={<RoleGuard role="admin"><AdminHolidays /></RoleGuard>} />
         <Route path="/admin/analytics" element={<RoleGuard role="admin"><AdminAnalytics /></RoleGuard>} />
 
