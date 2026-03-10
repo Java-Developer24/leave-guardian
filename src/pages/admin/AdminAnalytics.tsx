@@ -256,14 +256,15 @@ export default function AdminAnalytics() {
           </div>
         </div>
 
-        <div className="bg-card border border-border rounded-xl p-5">
+        <div className="bg-card border border-border rounded-xl p-5 flex flex-col h-full">
           <h3 className="text-sm font-bold font-heading mb-1 flex items-center gap-2">
             <Shield size={14} className="text-info" /> Department Risk Analysis
           </h3>
           <p className="text-[10px] text-muted-foreground mb-4">Shrinkage levels across departments</p>
-          <div className="space-y-3">
+
+          <div className="flex-1 overflow-y-auto pr-2 space-y-4">
             {deptRisk.map(d => (
-              <div key={d.name} className="space-y-1">
+              <div key={d.name} className="space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-semibold">{d.name}</span>
                   <div className="flex items-center gap-2">
@@ -276,6 +277,27 @@ export default function AdminAnalytics() {
                 <Progress value={(d.shrinkage / 15) * 100} className="h-2" />
               </div>
             ))}
+          </div>
+
+          <div className="mt-4 border-t border-border/30 pt-4 text-[10px] text-muted-foreground">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-destructive" /> High risk
+              </span>
+              <span className="font-semibold">{deptRisk.filter(d => d.risk === 'High').length}</span>
+            </div>
+            <div className="flex items-center justify-between mt-2">
+              <span className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-warning" /> Moderate risk
+              </span>
+              <span className="font-semibold">{deptRisk.filter(d => d.risk === 'Moderate').length}</span>
+            </div>
+            <div className="flex items-center justify-between mt-2">
+              <span className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-success" /> Low risk
+              </span>
+              <span className="font-semibold">{deptRisk.filter(d => d.risk === 'Low').length}</span>
+            </div>
           </div>
         </div>
       </div>

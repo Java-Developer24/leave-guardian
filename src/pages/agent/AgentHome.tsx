@@ -47,7 +47,9 @@ export default function AgentHome() {
   const rejected = myLeaves.filter(l => l.status === 'Rejected').length;
   const swapTransfer = myLeaves.filter(l => l.type === 'Transfer' || l.type === 'Swap').length;
 
-  const pendingRequests = myLeaves.filter(l => ['PendingSupervisor', 'PendingPeer'].includes(l.status));
+  const pendingRequests = myLeaves.filter(l => ['PendingSupervisor', 'PendingPeer', 'Submitted'].includes(l.status));
+  const pendingSupervisorCount = myLeaves.filter(l => l.status === 'PendingSupervisor').length;
+  const pendingPeerCount = myLeaves.filter(l => l.status === 'PendingPeer').length;
   const recentHistory = myLeaves.filter(l => l.status === 'Approved' || l.status === 'Rejected').slice(0, 12);
   const getUserName = (id: string) => users.find(u => u.id === id)?.name ?? id;
 
@@ -86,7 +88,7 @@ export default function AgentHome() {
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {/* Pending Requests */}
-        <div className="lg:col-span-2 glass-card-featured overflow-hidden">
+        <div className="lg:col-span-2 glass-card-featured">
           <div className="px-6 py-4 border-b border-border/15 flex items-center justify-between bg-gradient-to-r from-warning/3 to-transparent">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center border border-warning/12">
@@ -94,7 +96,11 @@ export default function AgentHome() {
               </div>
               <div>
                 <h2 className="text-sm font-bold tracking-heading font-heading">Pending Requests</h2>
-                <p className="text-[10px] text-muted-foreground">{pendingRequests.length} awaiting approval</p>
+                <div className="flex flex-wrap items-center gap-2 mt-1">
+                  <span className="text-[10px] text-muted-foreground">{pendingRequests.length} awaiting approval</span>
+                  <span className="text-[10px] text-foreground bg-muted/30 px-2 py-0.5 rounded-full border border-border/20">Supervisor: {pendingSupervisorCount}</span>
+                  <span className="text-[10px] text-foreground bg-muted/30 px-2 py-0.5 rounded-full border border-border/20">Peer: {pendingPeerCount}</span>
+                </div>
               </div>
             </div>
             <Link to="/agent/summary" className="text-[10px] text-primary font-bold hover:underline flex items-center gap-1">View all <TrendingUp size={10} /></Link>
@@ -108,7 +114,7 @@ export default function AgentHome() {
               <p className="text-[10px] text-muted-foreground/40 mt-1">All caught up!</p>
             </div>
           ) : (
-            <div className="divide-y divide-border/10">
+            <div className="max-h-[360px] overflow-y-auto divide-y divide-border/10">
               {pendingRequests.slice(0, 10).map((l, i) => (
                 <motion.div key={l.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
                   className="flex items-center justify-between px-6 py-3.5 table-row-hover"

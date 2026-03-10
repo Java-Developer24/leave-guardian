@@ -129,12 +129,18 @@ export default function AgentLeave() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             <div className="lg:col-span-3">
-              <LeaveCalendar month={month} year={year} holidays={holidayMap} blockedDates={blockedDates}
-                requestedDates={requestedDates} approvedDates={approvedDates} selectedDates={selectedDates}
-                onSelect={setSelectedDates} onMonthChange={(y, m) => { setYear(y); setMonth(m); }}
-              />
+              <div className="bg-card border border-border rounded-xl p-5">
+                <h3 className="text-xs font-bold mb-3 font-heading flex items-center gap-2">
+                  <Calendar size={13} className="text-info" /> Select Leave Dates
+                </h3>
+                <LeaveCalendar month={month} year={year} holidays={holidayMap} blockedDates={blockedDates}
+                  requestedDates={requestedDates} approvedDates={approvedDates} selectedDates={selectedDates}
+                  onSelect={setSelectedDates} onMonthChange={(y, m) => { setYear(y); setMonth(m); }}
+                />
+                <p className="text-[10px] text-muted-foreground mt-2">Click dates on the calendar to choose your leave days.</p>
+              </div>
             </div>
 
             <div className="lg:col-span-2 space-y-4">
@@ -224,87 +230,68 @@ export default function AgentLeave() {
                 </div>
               </div>
 
-              {/* My Leave Requests */}
-              <div className="bg-card border border-border rounded-xl p-4">
-                <h3 className="text-xs font-bold mb-3 font-heading flex items-center gap-2">
-                  <Clock size={13} className="text-warning" /> My Leave Requests
-                </h3>
-                {recentLeaves.length === 0 ? (
-                  <p className="text-xs text-muted-foreground/50 text-center py-4">No requests yet</p>
-                ) : (
-                  <div className="space-y-2">
-                    {recentLeaves.map(l => (
-                      <div key={l.id} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/20 border border-border">
-                        <div>
-                          <span className="text-xs font-semibold">{formatDate(l.date)}</span>
-                          <span className="text-[10px] text-muted-foreground ml-2">{l.type}</span>
-                        </div>
-                        <StatusChip status={l.status} />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </TabsContent>
 
         {/* ── Swap Leave Tab ── */}
         <TabsContent value="swap">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-card border border-border rounded-xl p-6 space-y-5">
-              <h2 className="text-base font-bold font-heading flex items-center gap-2">
-                <ArrowLeftRight size={18} className="text-info" /> Swap Leave Request
-              </h2>
-              <p className="text-xs text-muted-foreground">Exchange your leave date with a peer's date. Both parties must agree.</p>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1.5">Select Peer (OHR/Name)</label>
-                <select value={swapPeer} onChange={e => setSwapPeer(e.target.value)} className="glass-input text-sm">
-                  <option value="">Select a team member...</option>
-                  {deptPeers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold mb-1.5">Your Date</label>
-                  <input type="date" value={swapMyDate} onChange={e => setSwapMyDate(e.target.value)} className="glass-input text-sm" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1.5">Peer Date</label>
-                  <input type="date" value={swapPeerDate} onChange={e => setSwapPeerDate(e.target.value)} className="glass-input text-sm" />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1.5">Comments</label>
-                <textarea value={swapComments} onChange={e => setSwapComments(e.target.value)} rows={4} maxLength={500} className="glass-input resize-none text-sm" placeholder="Add any notes for the peer..." />
-                <div className="text-right text-[10px] text-muted-foreground/40 mt-0.5">{swapComments.length}/500</div>
-              </div>
-
-              <div className="flex gap-3">
-                <button onClick={handleSwapSubmit} disabled={submitting} className="flex-1 btn-primary-gradient font-bold py-3 rounded-xl text-sm disabled:opacity-40">
-                  {submitting ? 'Submitting...' : 'Submit Swap Request'}
-                </button>
-                <button onClick={() => { setSwapPeer(''); setSwapMyDate(''); setSwapPeerDate(''); setSwapComments(''); }} className="px-6 py-3 rounded-xl border border-border text-sm font-semibold hover:bg-muted/30 transition-colors">
-                  Cancel
-                </button>
-              </div>
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+            <div className="lg:col-span-3 bg-card border border-border rounded-xl p-5">
+              <h3 className="text-xs font-bold mb-3 font-heading flex items-center gap-2">
+                <Calendar size={13} className="text-info" /> Select Your Leave Date
+              </h3>
+              <LeaveCalendar month={month} year={year} holidays={holidayMap} blockedDates={blockedDates}
+                requestedDates={requestedDates} approvedDates={approvedDates} selectedDates={swapMyDate ? [swapMyDate] : []}
+                onSelect={dates => setSwapMyDate(dates[0] ?? '')} onMonthChange={(y, m) => { setYear(y); setMonth(m); }}
+              />
+              <p className="text-[10px] text-muted-foreground mt-2">Click a date to select which leave day you want to swap.</p>
             </div>
 
-            {/* Right sidebar info */}
-            <div className="space-y-4">
-              <div className="bg-card border border-border rounded-xl p-5">
-                <h3 className="text-xs font-bold mb-3 font-heading flex items-center gap-2"><Info size={13} className="text-info" /> How Swap Works</h3>
-                <div className="space-y-2 text-xs text-muted-foreground">
-                  <p>1. Select a peer from your department</p>
-                  <p>2. Choose the date you want to swap</p>
-                  <p>3. Select the peer's date to exchange</p>
-                  <p>4. Peer will receive a notification to approve</p>
-                  <p>5. Once approved, supervisor reviews the swap</p>
+            <div className="lg:col-span-2 flex flex-col gap-6">
+              <div className="bg-card border border-border rounded-xl p-5 flex flex-col h-full">
+                <h2 className="text-base font-bold font-heading flex items-center gap-2">
+                  <ArrowLeftRight size={18} className="text-info" /> Swap Leave Request
+                </h2>
+                <p className="text-xs text-muted-foreground">Exchange your leave date with a peer's date. Both parties must agree.</p>
+
+                <div className="flex-1">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5">Select Peer (OHR/Name)</label>
+                    <select value={swapPeer} onChange={e => setSwapPeer(e.target.value)} className="glass-input text-sm">
+                      <option value="">Select a team member...</option>
+                      {deptPeers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <label className="block text-xs font-semibold mb-1.5">Your Date</label>
+                      <input type="date" value={swapMyDate} onChange={e => setSwapMyDate(e.target.value)} className="glass-input text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold mb-1.5">Peer Date</label>
+                      <input type="date" value={swapPeerDate} onChange={e => setSwapPeerDate(e.target.value)} className="glass-input text-sm" />
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="block text-xs font-semibold mb-1.5">Comments</label>
+                    <textarea value={swapComments} onChange={e => setSwapComments(e.target.value)} rows={4} maxLength={500} className="glass-input resize-none text-sm" placeholder="Add any notes for the peer..." />
+                    <div className="text-right text-[10px] text-muted-foreground/40 mt-0.5">{swapComments.length}/500</div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-5">
+                  <button onClick={handleSwapSubmit} disabled={submitting} className="flex-1 btn-primary-gradient font-bold py-3 rounded-xl text-sm disabled:opacity-40">
+                    {submitting ? 'Submitting...' : 'Submit Swap Request'}
+                  </button>
+                  <button onClick={() => { setSwapPeer(''); setSwapMyDate(''); setSwapPeerDate(''); setSwapComments(''); }} className="px-6 py-3 rounded-xl border border-border text-sm font-semibold hover:bg-muted/30 transition-colors">
+                    Cancel
+                  </button>
                 </div>
               </div>
+
               <div className="bg-card border border-border rounded-xl p-5">
                 <h3 className="text-xs font-bold mb-3 font-heading flex items-center gap-2"><Calendar size={13} className="text-primary" /> {monthNames[month - 1]} Leave Balance</h3>
                 <div className="space-y-2">
@@ -323,54 +310,97 @@ export default function AgentLeave() {
               </div>
             </div>
           </div>
+
+          <div className="bg-card border border-border rounded-xl p-5 mt-6">
+            <h3 className="text-xs font-bold mb-3 font-heading flex items-center gap-2"><Info size={13} className="text-info" /> How Swap Works</h3>
+            <div className="space-y-2 text-xs text-muted-foreground">
+              <p>1. Select a peer from your department</p>
+              <p>2. Choose the date you want to swap</p>
+              <p>3. Select the peer's date to exchange</p>
+              <p>4. Peer will receive a notification to approve</p>
+              <p>5. Once approved, supervisor reviews the swap</p>
+            </div>
+          </div>
         </TabsContent>
 
         {/* ── Pass the Leave Tab ── */}
         <TabsContent value="pass">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-card border border-border rounded-xl p-6 space-y-5">
-              <h2 className="text-base font-bold font-heading flex items-center gap-2">
-                <Send size={18} className="text-accent" /> Pass the Leave
-              </h2>
-              <p className="text-xs text-muted-foreground">Transfer your approved or pending leave to a peer.</p>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1.5">Select Peer</label>
-                <select value={passPeer} onChange={e => setPassPeer(e.target.value)} className="glass-input text-sm">
-                  <option value="">Select a team member...</option>
-                  {deptPeers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1.5">Leave Date to Pass</label>
-                <input type="date" value={passDate} onChange={e => setPassDate(e.target.value)} className="glass-input text-sm" />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1.5">Comments</label>
-                <textarea value={passComments} onChange={e => setPassComments(e.target.value)} rows={4} maxLength={500} className="glass-input resize-none text-sm" placeholder="Reason for passing the leave..." />
-                <div className="text-right text-[10px] text-muted-foreground/40 mt-0.5">{passComments.length}/500</div>
-              </div>
-
-              <div className="flex gap-3">
-                <button onClick={handlePassSubmit} disabled={submitting} className="flex-1 btn-primary-gradient font-bold py-3 rounded-xl text-sm disabled:opacity-40">
-                  {submitting ? 'Submitting...' : 'Submit Pass Request'}
-                </button>
-                <button onClick={() => { setPassPeer(''); setPassDate(''); setPassComments(''); }} className="px-6 py-3 rounded-xl border border-border text-sm font-semibold hover:bg-muted/30 transition-colors">
-                  Cancel
-                </button>
-              </div>
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+            <div className="lg:col-span-3 bg-card border border-border rounded-xl p-5">
+              <h3 className="text-xs font-bold mb-3 font-heading flex items-center gap-2">
+                <Calendar size={13} className="text-accent" /> Select Leave Date to Pass
+              </h3>
+              <LeaveCalendar month={month} year={year} holidays={holidayMap} blockedDates={blockedDates}
+                requestedDates={requestedDates} approvedDates={approvedDates} selectedDates={passDate ? [passDate] : []}
+                onSelect={dates => setPassDate(dates[0] ?? '')} onMonthChange={(y, m) => { setYear(y); setMonth(m); }}
+              />
+              <p className="text-[10px] text-muted-foreground mt-2">Click a date to select which approved leave you want to pass.</p>
             </div>
 
-            <div className="bg-card border border-border rounded-xl p-5">
-              <h3 className="text-xs font-bold mb-3 font-heading flex items-center gap-2"><Info size={13} className="text-accent" /> How Pass Works</h3>
-              <div className="space-y-2 text-xs text-muted-foreground">
-                <p>1. Select a peer from your department</p>
-                <p>2. Choose the leave date to transfer</p>
-                <p>3. Peer will receive notification to accept</p>
-                <p>4. Once accepted, supervisor reviews the transfer</p>
+            <div className="lg:col-span-2 flex flex-col gap-6">
+              <div className="bg-card border border-border rounded-xl p-5 flex flex-col h-full">
+                <h2 className="text-base font-bold font-heading flex items-center gap-2">
+                  <Send size={18} className="text-accent" /> Pass the Leave
+                </h2>
+                <p className="text-xs text-muted-foreground">Transfer your approved or pending leave to a peer.</p>
+
+                <div className="flex-1">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5">Select Peer</label>
+                    <select value={passPeer} onChange={e => setPassPeer(e.target.value)} className="glass-input text-sm">
+                      <option value="">Select a team member...</option>
+                      {deptPeers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="block text-xs font-semibold mb-1.5">Leave Date to Pass</label>
+                    <input type="date" value={passDate} onChange={e => setPassDate(e.target.value)} className="glass-input text-sm" />
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="block text-xs font-semibold mb-1.5">Comments</label>
+                    <textarea value={passComments} onChange={e => setPassComments(e.target.value)} rows={4} maxLength={500} className="glass-input resize-none text-sm" placeholder="Reason for passing the leave..." />
+                    <div className="text-right text-[10px] text-muted-foreground/40 mt-0.5">{passComments.length}/500</div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-5">
+                  <button onClick={handlePassSubmit} disabled={submitting} className="flex-1 btn-primary-gradient font-bold py-3 rounded-xl text-sm disabled:opacity-40">
+                    {submitting ? 'Submitting...' : 'Submit Pass Request'}
+                  </button>
+                  <button onClick={() => { setPassPeer(''); setPassDate(''); setPassComments(''); }} className="px-6 py-3 rounded-xl border border-border text-sm font-semibold hover:bg-muted/30 transition-colors">
+                    Cancel
+                  </button>
+                </div>
               </div>
+
+              <div className="bg-card border border-border rounded-xl p-5">
+                <h3 className="text-xs font-bold mb-3 font-heading flex items-center gap-2"><Calendar size={13} className="text-primary" /> {monthNames[month - 1]} Leave Balance</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Monthly Quota</span>
+                    <span className="font-bold">{rules.agentMonthlyLeaveCap}</span>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full accent-bar rounded-full" style={{ width: `${Math.min(100, capPct)}%` }} />
+                  </div>
+                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                    <span>Used: {currentCount}</span>
+                    <span>Remaining: {capRemaining}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-card border border-border rounded-xl p-5 mt-6">
+            <h3 className="text-xs font-bold mb-3 font-heading flex items-center gap-2"><Info size={13} className="text-accent" /> How Pass Works</h3>
+            <div className="space-y-2 text-xs text-muted-foreground">
+              <p>1. Select a peer from your department</p>
+              <p>2. Choose the leave date to transfer</p>
+              <p>3. Peer will receive notification to accept</p>
+              <p>4. Once accepted, supervisor reviews the transfer</p>
             </div>
           </div>
         </TabsContent>

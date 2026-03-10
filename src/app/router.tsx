@@ -35,7 +35,7 @@ export default function AppRouter() {
         <Route path="/agent/home" element={<RoleGuard role="agent"><AgentHome /></RoleGuard>} />
         <Route path="/agent/summary" element={<RoleGuard role="agent"><AgentSummary /></RoleGuard>} />
         <Route path="/agent/leave" element={<RoleGuard role="agent"><AgentLeave /></RoleGuard>} />
-        <Route path="/agent/requests" element={<RoleGuard role="agent"><AgentRequests /></RoleGuard>} />
+        {/* <Route path="/agent/requests" element={<RoleGuard role="agent"><AgentRequests /></RoleGuard>} /> */}
 
         <Route path="/supervisor/home" element={<RoleGuard role="supervisor"><SupervisorHome /></RoleGuard>} />
         <Route path="/supervisor/approvals" element={<RoleGuard role="supervisor"><SupervisorApprovals /></RoleGuard>} />

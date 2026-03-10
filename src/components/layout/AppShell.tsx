@@ -16,7 +16,7 @@ const navSections: Record<string, { label: string; items: { to: string; label: s
     ]},
     { label: 'Actions', items: [
       { to: '/agent/leave', label: 'Apply Leave', icon: Calendar },
-      { to: '/agent/requests', label: 'Swap / Transfer', icon: ArrowLeftRight },
+     
     ]},
   ],
   supervisor: [
@@ -181,9 +181,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <ChevronLeft size={14} className={`transition-transform duration-200 ${collapsed ? 'rotate-180' : ''}`} />
             {!collapsed && <span className="font-medium">Collapse</span>}
           </button>
-          <div className="flex items-center gap-2 px-3.5">
-            <span className="text-[9px] text-muted-foreground/30 font-medium">LSM v2.1</span>
-          </div>
+          
         </div>
       </div>
     </div>

@@ -10,7 +10,7 @@ import { calcDailyShrinkage } from '@/core/utils/shrinkage';
 import { toDateStr, formatDate } from '@/core/utils/dates';
 import { showToast } from '@/components/toasts/ToastContainer';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { TrendingUp, CheckSquare, AlertTriangle, Users, Clock, Calendar, Gauge, Shield, Target, Check, X } from 'lucide-react';
+import { TrendingUp, CheckSquare, AlertTriangle, Users, Clock, Calendar, Gauge, Shield, Target, Check, X, ChevronRight } from 'lucide-react';
 
 export default function SupervisorHome() {
   const { leaves, schedule, rules, currentUser, users, repo, departments } = useAppStore();
@@ -82,10 +82,15 @@ export default function SupervisorHome() {
 
       {/* Pending Leave Requests */}
       <div className="mb-6">
-        <h2 className="text-base font-bold font-heading mb-4 flex items-center gap-2">
-          <Clock size={16} className="text-warning" /> Pending Leave Requests
-          <span className="text-xs text-muted-foreground font-normal ml-2">{pending.length} requests need your action</span>
-        </h2>
+        <div className="flex items-start justify-between mb-4 gap-4">
+          <h2 className="text-base font-bold font-heading flex items-center gap-2">
+            <Clock size={16} className="text-warning" /> Pending Leave Requests
+            <span className="text-xs text-muted-foreground font-normal ml-2">{pending.length} requests need your action</span>
+          </h2>
+          <Link to="/supervisor/approvals" className="text-xs font-bold text-primary hover:underline flex items-center gap-1">
+            View all <ChevronRight size={14} />
+          </Link>
+        </div>
 
         {pending.length === 0 ? (
           <div className="bg-card border border-border rounded-xl py-12 text-center">
@@ -94,7 +99,7 @@ export default function SupervisorHome() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {pending.slice(0, 8).map((l, i) => {
+            {pending.slice(0, 4).map((l, i) => {
               const potentialShrinkage = currentShrinkage + 1.2;
               const isHighRisk = potentialShrinkage > rules.maxDailyPct * 0.8;
               return (
