@@ -199,16 +199,7 @@ export default function LandingPage() {
       {/* Hero */}
       <section ref={heroRef} className="relative z-10 px-6 lg:px-16 xl:px-24 pb-20  lg:pb-20 max-w-[1400px] mx-auto">
         <motion.div style={{ y: heroY, opacity: heroOpacity, scale: heroScale }} className="text-center max-w-5xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ delay: 0.1, duration: 0.6, type: 'spring', stiffness: 200 }}
-            className="inline-flex items-center gap-2.5 bg-gradient-to-r from-primary/10 to-accent/5 border border-primary/20 px-6 py-2.5 rounded-full mb-12 backdrop-blur-sm"
-          >
-            <Sparkles size={14} className="text-primary animate-glow-breathe" />
-            <span className="text-[11px] font-bold text-primary tracking-wider uppercase font-heading">Intelligent Workforce Management</span>
-            <ChevronRight size={12} className="text-primary/50" />
-          </motion.div>
+          
 
           <motion.h1
             initial={{ opacity: 0, y: 40 }}
@@ -238,7 +229,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5, duration: 0.5 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-14"
+            className="flex flex-col sm:flex-row items-center justify-center gap-20 mt-8"
           >
             <Link to="/login" className="btn-primary-gradient text-primary-foreground font-bold px-10 py-3.5 rounded-2xl text-sm flex items-center gap-2.5 group shadow-2xl shadow-primary/25">
               Launch Dashboard
