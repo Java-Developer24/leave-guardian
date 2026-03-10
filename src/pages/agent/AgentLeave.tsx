@@ -10,7 +10,7 @@ import { isDayBlocked, agentMonthlyCount } from '@/core/utils/shrinkage';
 import { validateReason, validateDateSelection } from '@/core/utils/validation';
 import { showToast } from '@/components/toasts/ToastContainer';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Send, AlertTriangle, CheckCircle, Calendar, Gauge, Info, Clock, User, MessageSquare } from 'lucide-react';
+import { Send, AlertTriangle, CheckCircle, Calendar, Gauge, Info, Clock, ArrowLeftRight } from 'lucide-react';
 
 export default function AgentLeave() {
   const { currentUser, leaves, holidays, rules, leaveWindow, schedule, repo, refreshLeaves, users } = useAppStore();
