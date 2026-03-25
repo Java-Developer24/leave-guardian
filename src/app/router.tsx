@@ -7,16 +7,18 @@ import LoginPage from '@/pages/login/LoginPage';
 import AgentHome from '@/pages/agent/AgentHome';
 import AgentSummary from '@/pages/agent/AgentSummary';
 import AgentLeave from '@/pages/agent/AgentLeave';
-import AgentRequests from '@/pages/agent/AgentRequests';
 import SupervisorHome from '@/pages/supervisor/SupervisorHome';
 import SupervisorApprovals from '@/pages/supervisor/SupervisorApprovals';
 import SupervisorTeam from '@/pages/supervisor/SupervisorTeam';
+import SupervisorSchedule from '@/pages/supervisor/SupervisorSchedule';
 import SupervisorAnalytics from '@/pages/supervisor/SupervisorAnalytics';
+import ManagerAnalytics from '@/pages/manager/ManagerAnalytics';
 import AdminScheduleUpload from '@/pages/admin/uploads/AdminScheduleUpload';
 import AdminAttendanceUpload from '@/pages/admin/uploads/AdminAttendanceUpload';
 import AdminConfig from '@/pages/admin/config/AdminConfig';
 import AdminHolidays from '@/pages/admin/config/AdminHolidays';
 import AdminAnalytics from '@/pages/admin/AdminAnalytics';
+import AdminWeekoffApprovals from '@/pages/admin/AdminWeekoffApprovals';
 
 function RoleGuard({ role, children }: { role: string; children: React.ReactNode }) {
   const currentUser = useAppStore(s => s.currentUser);
@@ -40,10 +42,14 @@ export default function AppRouter() {
         <Route path="/supervisor/home" element={<RoleGuard role="supervisor"><SupervisorHome /></RoleGuard>} />
         <Route path="/supervisor/approvals" element={<RoleGuard role="supervisor"><SupervisorApprovals /></RoleGuard>} />
         <Route path="/supervisor/team" element={<RoleGuard role="supervisor"><SupervisorTeam /></RoleGuard>} />
+        <Route path="/supervisor/schedule" element={<RoleGuard role="supervisor"><SupervisorSchedule /></RoleGuard>} />
         <Route path="/supervisor/analytics" element={<RoleGuard role="supervisor"><SupervisorAnalytics /></RoleGuard>} />
+
+        <Route path="/manager/analytics" element={<RoleGuard role="manager"><ManagerAnalytics /></RoleGuard>} />
 
         <Route path="/admin/uploads/schedule" element={<RoleGuard role="admin"><AdminScheduleUpload /></RoleGuard>} />
         <Route path="/admin/uploads/attendance" element={<RoleGuard role="admin"><AdminAttendanceUpload /></RoleGuard>} />
+        <Route path="/admin/weekoff-swaps" element={<RoleGuard role="admin"><AdminWeekoffApprovals /></RoleGuard>} />
         <Route path="/admin/config" element={<RoleGuard role="admin"><AdminConfig /></RoleGuard>} />
         <Route path="/admin/config/holidays" element={<RoleGuard role="admin"><AdminHolidays /></RoleGuard>} />
         <Route path="/admin/analytics" element={<RoleGuard role="admin"><AdminAnalytics /></RoleGuard>} />

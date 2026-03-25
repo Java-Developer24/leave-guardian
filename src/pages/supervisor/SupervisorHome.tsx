@@ -13,7 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { TrendingUp, CheckSquare, AlertTriangle, Users, Clock, Calendar, Gauge, Shield, Target, Check, X, ChevronRight } from 'lucide-react';
 
 export default function SupervisorHome() {
-  const { leaves, schedule, rules, currentUser, users, repo, departments } = useAppStore();
+  const { leaves, schedule, rules, currentUser, users, repo, departments, weekoffSwapRequests } = useAppStore();
   const refreshLeaves = useAppStore(s => s.refreshLeaves);
   const deptId = currentUser?.departmentId ?? 'd1';
   const myDept = departments.find(d => d.id === deptId);
@@ -26,6 +26,8 @@ export default function SupervisorHome() {
   const todayStr = toDateStr(new Date());
   const currentShrinkage = calcDailyShrinkage(todayStr, deptLeaves, schedule);
   const pending = deptLeaves.filter(l => l.status === 'PendingSupervisor');
+  const pendingTransferCount = pending.filter(leave => leave.type === 'Transfer').length;
+  const pendingWeekoffSwaps = weekoffSwapRequests.filter(request => request.departmentId === deptId && request.status === 'PendingAdmin').length;
   const teamAgents = users.filter(u => u.role === 'agent' && u.departmentId === deptId);
   const teamSize = teamAgents.length;
   const getUserName = (id: string) => users.find(u => u.id === id)?.name ?? id;
@@ -79,6 +81,22 @@ export default function SupervisorHome() {
         <motion.div variants={staggerItem}><KpiCard label="Team Size" value={teamSize} icon={<Users size={18} />} accent="accent" /></motion.div>
         <motion.div variants={staggerItem}><KpiCard label="Shrinkage Level" value={`${currentShrinkage.toFixed(1)}%`} icon={<Gauge size={18} />} accent={currentShrinkage > rules.maxDailyPct ? 'primary' : 'info'} subtitle={`Cap: ${rules.maxDailyPct}%`} /></motion.div>
       </motion.div>
+
+      <div className="bg-card border border-border rounded-xl px-5 py-4 mb-6 flex flex-wrap items-center gap-4">
+        <div className="mr-auto">
+          <div className="text-sm font-bold font-heading">Supervisor Actions</div>
+          <div className="text-[11px] text-muted-foreground">Transfer requests stay supervisor-only, while week-off swaps route to admin approval.</div>
+        </div>
+        <Link to="/supervisor/approvals?type=Transfer" className="rounded-xl border border-border bg-background px-4 py-2.5 text-xs font-semibold hover:bg-muted/30 transition-colors">
+          Transfer Leaves {pendingTransferCount > 0 ? `(${pendingTransferCount})` : ''}
+        </Link>
+        <Link to="/supervisor/schedule" className="rounded-xl border border-border bg-background px-4 py-2.5 text-xs font-semibold hover:bg-muted/30 transition-colors">
+          Week Schedule {pendingWeekoffSwaps > 0 ? `(${pendingWeekoffSwaps})` : ''}
+        </Link>
+        <Link to="/supervisor/approvals" className="rounded-xl btn-primary-gradient px-4 py-2.5 text-xs font-bold text-primary-foreground">
+          Review Queue
+        </Link>
+      </div>
 
       {/* Pending Leave Requests */}
       <div className="mb-6">

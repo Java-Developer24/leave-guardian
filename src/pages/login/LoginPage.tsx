@@ -43,7 +43,7 @@ function FeaturePill({ icon: Icon, label, delay }: { icon: React.ElementType; la
 }
 
 const statCards = [
-  { value: 103, suffix: '', label: 'Agents', icon: Users },
+  { value: 103, suffix: '', label: 'Guides', icon: Users },
   { value: 11,  suffix: '', label: 'Departments', icon: Layers },
   { value: 99,  suffix: '%', label: 'Uptime', icon: TrendingUp },
 ];
@@ -269,7 +269,8 @@ export default function LoginPage() {
               {[
                 { role: 'admin',      label: 'Admin',      icon: Shield, color: 'from-primary/10 to-primary/4 border-primary/12 text-primary' },
                 { role: 'supervisor', label: 'Supervisor', icon: Users,  color: 'from-accent/10 to-accent/4 border-accent/12 text-accent' },
-                { role: 'agent',      label: 'Agent',      icon: Zap,    color: 'from-info/10 to-info/4 border-info/12 text-info' },
+                { role: 'manager',    label: 'Manager',    icon: Layers, color: 'from-primary/10 to-info/4 border-primary/12 text-primary' },
+                { role: 'agent',      label: 'Guide',      icon: Zap,    color: 'from-info/10 to-info/4 border-info/12 text-info' },
               ].map(r => (
                 <button
                   key={r.role}
@@ -306,10 +307,15 @@ export default function LoginPage() {
                       return <option key={u.id} value={u.id}>{u.name} — {dept?.name ?? 'Supervisor'}</option>;
                     })}
                   </optgroup>
-                  <optgroup label="🧑‍💼 Agents (sample)">
+                  <optgroup label="📊 Managers">
+                    {seedUsers.filter(u => u.role === 'manager').map(u =>
+                      <option key={u.id} value={u.id}>{u.name} — Manager</option>
+                    )}
+                  </optgroup>
+                  <optgroup label="🧑‍💼 Guides (sample)">
                     {seedUsers.filter(u => u.role === 'agent').filter((_, i) => i % 10 === 0).map(u => {
                       const dept = seedDepartments.find(d => d.id === u.departmentId);
-                      return <option key={u.id} value={u.id}>{u.name} — {dept?.name ?? 'Agent'}</option>;
+                      return <option key={u.id} value={u.id}>{u.name} — {dept?.name ?? 'Guide'}</option>;
                     })}
                   </optgroup>
                 </select>

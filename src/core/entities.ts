@@ -1,7 +1,9 @@
-export type Role = 'agent' | 'supervisor' | 'admin';
+export type Role = 'agent' | 'supervisor' | 'admin' | 'manager';
 export type LeaveType = 'Planned' | 'Unplanned' | 'Swap' | 'Transfer';
 export type LeaveStatus = 'Draft' | 'Submitted' | 'PendingPeer' | 'PendingSupervisor' | 'Approved' | 'Rejected' | 'Cancelled';
 export type HolidayType = 'National' | 'Festival' | 'Regional' | 'Company';
+export type ForecastAlertStatus = 'Open' | 'Reviewed';
+export type WeekoffSwapStatus = 'PendingAdmin' | 'Approved' | 'Rejected';
 
 export interface User {
   id: string;
@@ -39,10 +41,52 @@ export interface LeaveRequest {
   departmentId: string;
   type: LeaveType;
   date: string;
+  peerLeaveDate?: string;
   days: number;
   reason?: string;
   peerId?: string;
   status: LeaveStatus;
+  history: { at: string; by: string; action: string; note?: string }[];
+}
+
+export interface LeaveSubmissionPreview {
+  date: string;
+  forecastVolume: number;
+  requiredGuides: number;
+  scheduledGuides: number;
+  availableGuidesAfterApproval: number;
+  shrinkageBefore: number;
+  shrinkageAfter: number;
+  needsManagerReview: boolean;
+}
+
+export interface ForecastAlert {
+  id: string;
+  leaveId: string;
+  requesterId: string;
+  departmentId: string;
+  date: string;
+  createdAt: string;
+  forecastVolume: number;
+  requiredGuides: number;
+  scheduledGuides: number;
+  availableGuides: number;
+  shrinkageBefore: number;
+  shrinkageAfter: number;
+  status: ForecastAlertStatus;
+}
+
+export interface WeekoffSwapRequest {
+  id: string;
+  departmentId: string;
+  requesterId: string;
+  sourceGuideId: string;
+  peerGuideId: string;
+  sourceDate: string;
+  peerDate: string;
+  weekStart: string;
+  status: WeekoffSwapStatus;
+  comment?: string;
   history: { at: string; by: string; action: string; note?: string }[];
 }
 

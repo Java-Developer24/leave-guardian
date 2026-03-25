@@ -13,6 +13,7 @@ interface CalendarProps {
   selectedDates: string[];
   onSelect: (dates: string[]) => void;
   onMonthChange?: (year: number, month: number) => void;
+  showLegend?: boolean;
 }
 
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -20,7 +21,7 @@ const WEEKDAY_FULL = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function LeaveCalendar({
   month, year, holidays, blockedDates, requestedDates, approvedDates,
-  selectedDates, onSelect, onMonthChange,
+  selectedDates, onSelect, onMonthChange, showLegend = true,
 }: CalendarProps) {
   const [direction, setDirection] = useState(0);
   const days = getDaysInMonth(year, month);
@@ -116,9 +117,9 @@ export default function LeaveCalendar({
             let cellClass = 'hover:bg-secondary/60 cursor-pointer text-foreground/80 hover:border-primary/20 border border-transparent';
             if (isSelected) cellClass = 'bg-gradient-to-br from-primary to-primary/80 text-primary-foreground ring-2 ring-primary/30 shadow-lg shadow-primary/25 border border-primary/40';
             else if (isApproved) cellClass = 'bg-success/10 text-success border border-success/25 shadow-sm shadow-success/5';
-            else if (isRequested) cellClass = 'bg-warning/10 text-warning border border-warning/25';
+            else if (isRequested) cellClass = 'bg-info/10 text-info border border-info/25';
             else if (isHoliday) cellClass = 'bg-accent/8 text-accent border border-accent/20';
-            else if (isBlocked) cellClass = 'bg-muted/15 text-muted-foreground/25 cursor-not-allowed border border-transparent';
+            else if (isBlocked) cellClass = 'bg-slate-200/80 text-slate-500 cursor-not-allowed border border-slate-300/70 grayscale';
 
             return (
               <motion.button
@@ -139,7 +140,7 @@ export default function LeaveCalendar({
                   <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary" style={{ boxShadow: '0 0 8px hsla(354,100%,64%,0.7)' }} />
                 )}
 
-                <span className={`font-bold text-[13px] ${isWeekend && !isSelected && !isHoliday && !isApproved && !isRequested ? 'text-muted-foreground/40' : ''}`}>
+                <span className={`font-bold text-[13px] ${isWeekend && !isSelected && !isHoliday && !isApproved && !isRequested && !isBlocked ? 'text-muted-foreground/40' : ''} ${isBlocked ? 'line-through decoration-slate-400/80' : ''}`}>
                   {day.getDate()}
                 </span>
 
@@ -150,7 +151,7 @@ export default function LeaveCalendar({
 
                 {/* Status dots */}
                 {(isApproved || isRequested) && !isSelected && (
-                  <div className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isApproved ? 'bg-success' : 'bg-warning'}`} />
+                  <div className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isApproved ? 'bg-success' : 'bg-info'}`} />
                 )}
 
                 {/* Tooltip */}
@@ -166,23 +167,25 @@ export default function LeaveCalendar({
       </AnimatePresence>
 
       {/* Legend */}
-      <div className="px-7 pb-6 pt-2 border-t border-border/15">
-        <div className="flex flex-wrap gap-x-5 gap-y-2 text-[10px]">
-          {[
-            { label: 'Today', cls: 'border-2 border-primary/50' },
-            { label: 'Selected', cls: 'bg-gradient-to-r from-primary to-primary/80' },
-            { label: 'Approved', cls: 'bg-success/15 border border-success/25' },
-            { label: 'Requested', cls: 'bg-warning/15 border border-warning/25' },
-            { label: 'Holiday', cls: 'bg-accent/10 border border-accent/20' },
-            { label: 'Blocked', cls: 'bg-muted/20' },
-          ].map(l => (
-            <span key={l.label} className="flex items-center gap-2 text-muted-foreground/60">
-              <span className={`w-3 h-3 rounded-md ${l.cls}`} />
-              {l.label}
-            </span>
-          ))}
+      {showLegend && (
+        <div className="px-7 pb-6 pt-2 border-t border-border/15">
+          <div className="flex flex-wrap gap-x-5 gap-y-2 text-[10px]">
+            {[
+              { label: 'Today', cls: 'border-2 border-primary/50' },
+              { label: 'Selected', cls: 'bg-gradient-to-r from-primary to-primary/80' },
+              { label: 'Approved', cls: 'bg-success/15 border border-success/25' },
+              { label: 'Requested', cls: 'bg-info/15 border border-info/25' },
+              { label: 'Holiday', cls: 'bg-accent/10 border border-accent/20' },
+              { label: 'Blocked', cls: 'bg-slate-200/80 border border-slate-300/70' },
+            ].map(l => (
+              <span key={l.label} className="flex items-center gap-2 text-muted-foreground/60">
+                <span className={`w-3 h-3 rounded-md ${l.cls}`} />
+                {l.label}
+              </span>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -1,4 +1,16 @@
-import type { User, LeaveRequest, ScheduleDay, Holiday, ShrinkageRules, LeaveWindow, Attendance, Department } from '@/core/entities';
+import type {
+  User,
+  LeaveRequest,
+  ScheduleDay,
+  Holiday,
+  ShrinkageRules,
+  LeaveWindow,
+  Attendance,
+  Department,
+  ForecastAlert,
+  LeaveSubmissionPreview,
+  WeekoffSwapRequest,
+} from '@/core/entities';
 
 export interface IRepo {
   getUsers(): Promise<User[]>;
@@ -6,11 +18,17 @@ export interface IRepo {
   getDepartments(): Promise<Department[]>;
   getLeavesByUser(userId: string): Promise<LeaveRequest[]>;
   getAllLeaves(): Promise<LeaveRequest[]>;
+  previewLeaveSubmission(payload: { requesterId: string; departmentId: string; dates: string[] }): Promise<LeaveSubmissionPreview[]>;
   createLeave(payload: Omit<LeaveRequest, 'id' | 'history'>): Promise<LeaveRequest>;
   updateLeave(id: string, patch: Partial<LeaveRequest>): Promise<LeaveRequest>;
   getPendingApprovals(deptId: string): Promise<LeaveRequest[]>;
   approveLeave(id: string, by: string, note?: string): Promise<LeaveRequest>;
   rejectLeave(id: string, by: string, note?: string): Promise<LeaveRequest>;
+  getForecastAlerts(deptId?: string): Promise<ForecastAlert[]>;
+  getWeekoffSwapRequests(deptId?: string): Promise<WeekoffSwapRequest[]>;
+  createWeekoffSwapRequest(payload: Omit<WeekoffSwapRequest, 'id' | 'status' | 'history'> & { comment?: string }): Promise<WeekoffSwapRequest>;
+  approveWeekoffSwapRequest(id: string, by: string, note?: string): Promise<WeekoffSwapRequest>;
+  rejectWeekoffSwapRequest(id: string, by: string, note?: string): Promise<WeekoffSwapRequest>;
   getSchedule(deptId?: string): Promise<ScheduleDay[]>;
   uploadSchedule(rows: ScheduleDay[]): Promise<void>;
   getAttendance(): Promise<Attendance[]>;

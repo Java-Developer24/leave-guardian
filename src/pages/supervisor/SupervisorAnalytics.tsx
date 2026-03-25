@@ -6,17 +6,8 @@ import KpiCard from '@/components/kpis/KpiCard';
 import SectionHeader from '@/components/SectionHeader';
 import { calcDailyShrinkage } from '@/core/utils/shrinkage';
 import { toDateStr } from '@/core/utils/dates';
-import { Target, Gauge, Calendar, AlertTriangle, TrendingUp, Clock, Shield, CheckCircle, ArrowRight, Eye } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { Target, Gauge, Calendar, AlertTriangle, TrendingUp, Shield, CheckCircle, Eye, Users } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-
-const tooltipStyle = {
-  background: 'hsl(25, 60%, 97%)',
-  border: '1px solid hsl(25, 22%, 88%)',
-  borderRadius: 12,
-  fontSize: 11,
-  padding: '8px 12px',
-};
 
 export default function SupervisorAnalytics() {
   const { leaves, schedule, rules, currentUser, users, departments } = useAppStore();
@@ -32,6 +23,7 @@ export default function SupervisorAnalytics() {
   const totalWorkHrs = teamSize * 8;
   const currentWorkHrs = Math.round(totalWorkHrs * (1 - currentShrinkage / 100));
   const plannedLeaves = deptLeaves.filter(l => l.type === 'Planned').length;
+  const pendingApprovals = deptLeaves.filter(l => l.status === 'PendingSupervisor').length;
 
   // Risk dates
   const riskDates = useMemo(() => {
@@ -71,28 +63,35 @@ export default function SupervisorAnalytics() {
     ];
   }, []);
 
-  // Dept risk analysis
-  const deptRisk = useMemo(() => {
-    return departments.slice(0, 6).map(dept => {
-      const dl = leaves.filter(l => l.departmentId === dept.id);
-      const agents = users.filter(u => u.role === 'agent' && u.departmentId === dept.id).length;
-      const approved = dl.filter(l => l.status === 'Approved').length;
-      const shrinkage = agents > 0 ? parseFloat(((approved / Math.max(1, agents * 20)) * 100).toFixed(1)) : 0;
-      return { name: dept.name.replace('Messaging - ', '').replace('Messaging ', ''), shrinkage, risk: shrinkage > 8 ? 'High' : shrinkage > 5 ? 'Moderate' : 'Low' };
-    });
-  }, [departments, leaves, users]);
+  const teamRisk = useMemo(() => {
+    return teamAgents.map(agent => {
+      const agentLeaves = deptLeaves.filter(leave => leave.requesterId === agent.id);
+      const approved = agentLeaves.filter(leave => leave.status === 'Approved').length;
+      const pending = agentLeaves.filter(leave => ['PendingSupervisor', 'PendingPeer', 'Submitted'].includes(leave.status)).length;
+      const scheduledDays = schedule.filter(item => item.userId === agent.id && !item.weekOff).length;
+      const impact = scheduledDays === 0 ? 0 : Number((((approved + pending) / scheduledDays) * 100).toFixed(1));
+      return {
+        id: agent.id,
+        name: agent.name,
+        approved,
+        pending,
+        impact,
+        risk: impact > 15 ? 'High' : impact > 8 ? 'Moderate' : 'Low',
+      };
+    }).sort((a, b) => b.impact - a.impact).slice(0, 6);
+  }, [teamAgents, deptLeaves, schedule]);
 
   // Recommendations
   const recommendations = [
-    { title: 'Redistribute March leaves', desc: 'March 10-12 shows 6+ concurrent requests. Consider spreading across week.', severity: 'high' },
-    { title: 'Cross-train backup agents', desc: 'Department has 3 single-point-of-failure roles. Cross-training reduces risk.', severity: 'medium' },
-    { title: 'Adjust daily shrinkage cap', desc: `Current ${rules.maxDailyPct}% cap is frequently breached. Consider 12% for peak months.`, severity: 'low' },
+    { title: 'Redistribute high-risk days', desc: `${highRiskCount} high-risk date(s) need closer balancing inside ${myDept?.name ?? 'your department'}.`, severity: 'high' },
+    { title: 'Prioritize pending approvals', desc: `${pendingApprovals} request(s) are still waiting in your queue and affect near-term coverage.`, severity: 'medium' },
+    { title: 'Protect backup coverage', desc: 'Use week-off swaps and leave staggering only within your reporting team before escalating.', severity: 'low' },
   ];
 
   return (
     <motion.div {...pageTransition}>
       <SectionHeader tag="Supervisor Analytics" title="Performance" highlight="Analytics"
-        description={`Forecasting and risk analysis for ${myDept?.name ?? 'your department'}`}
+        description={`Current team and department insights for ${myDept?.name ?? 'your department'}`}
       />
 
       {/* KPIs */}
@@ -163,7 +162,7 @@ export default function SupervisorAnalytics() {
         </div>
       </div>
 
-      {/* Row 2: High Risk Dates + Department Risk */}
+      {/* Row 2: High Risk Dates + Team Risk */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
         <div className="bg-card border border-border rounded-xl p-5">
           <h3 className="text-sm font-bold font-heading mb-1 flex items-center gap-2">
@@ -187,22 +186,25 @@ export default function SupervisorAnalytics() {
 
         <div className="bg-card border border-border rounded-xl p-5">
           <h3 className="text-sm font-bold font-heading mb-1 flex items-center gap-2">
-            <Shield size={14} className="text-info" /> Department Risk Analysis
+            <Users size={14} className="text-info" /> Team Risk Analysis
           </h3>
-          <p className="text-[10px] text-muted-foreground mb-4">Shrinkage levels across departments</p>
+          <p className="text-[10px] text-muted-foreground mb-4">Only your reporting guides and department leave impact are shown here.</p>
           <div className="space-y-3">
-            {deptRisk.map(d => (
-              <div key={d.name} className="space-y-1">
+            {teamRisk.map(item => (
+              <div key={item.id} className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold">{d.name}</span>
+                  <span className="font-semibold">{item.name}</span>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold">{d.shrinkage}%</span>
-                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold border ${d.risk === 'High' ? 'bg-destructive/10 text-destructive border-destructive/15' : d.risk === 'Moderate' ? 'bg-warning/10 text-warning border-warning/15' : 'bg-success/10 text-success border-success/15'}`}>
-                      {d.risk}
+                    <span className="font-bold">{item.impact}%</span>
+                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold border ${item.risk === 'High' ? 'bg-destructive/10 text-destructive border-destructive/15' : item.risk === 'Moderate' ? 'bg-warning/10 text-warning border-warning/15' : 'bg-success/10 text-success border-success/15'}`}>
+                      {item.risk}
                     </span>
                   </div>
                 </div>
-                <Progress value={(d.shrinkage / 15) * 100} className="h-2" />
+                <Progress value={(item.impact / 20) * 100} className="h-2" />
+                <div className="text-[10px] text-muted-foreground">
+                  {item.approved} approved • {item.pending} pending
+                </div>
               </div>
             ))}
           </div>

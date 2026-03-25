@@ -1,5 +1,16 @@
 import { create } from 'zustand';
-import type { User, LeaveRequest, Holiday, ShrinkageRules, LeaveWindow, ScheduleDay, Attendance, Department } from '@/core/entities';
+import type {
+  User,
+  LeaveRequest,
+  Holiday,
+  ShrinkageRules,
+  LeaveWindow,
+  ScheduleDay,
+  Attendance,
+  Department,
+  ForecastAlert,
+  WeekoffSwapRequest,
+} from '@/core/entities';
 import type { IRepo } from '@/data/IRepo';
 import { mockRepo } from '@/data/mock/MockRepository';
 
@@ -9,6 +20,8 @@ interface AppState {
   users: User[];
   departments: Department[];
   leaves: LeaveRequest[];
+  forecastAlerts: ForecastAlert[];
+  weekoffSwapRequests: WeekoffSwapRequest[];
   holidays: Holiday[];
   rules: ShrinkageRules;
   leaveWindow: LeaveWindow;
@@ -20,6 +33,8 @@ interface AppState {
   logout: () => void;
   loadAll: () => Promise<void>;
   refreshLeaves: () => Promise<void>;
+  refreshForecastAlerts: () => Promise<void>;
+  refreshWeekoffSwapRequests: () => Promise<void>;
   refreshHolidays: () => Promise<void>;
   refreshRules: () => Promise<void>;
   refreshLeaveWindow: () => Promise<void>;
@@ -33,6 +48,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   users: [],
   departments: [],
   leaves: [],
+  forecastAlerts: [],
+  weekoffSwapRequests: [],
   holidays: [],
   rules: { maxDailyPct: 10, maxMonthlyPct: 10, agentMonthlyLeaveCap: 2 },
   leaveWindow: { open: true, startDay: 22, endDay: 26 },
@@ -50,27 +67,37 @@ export const useAppStore = create<AppState>((set, get) => ({
     await get().loadAll();
   },
 
-  logout: () => set({ currentUser: null, users: [], departments: [], leaves: [], holidays: [], schedule: [], attendance: [] }),
+  logout: () => set({ currentUser: null, users: [], departments: [], leaves: [], forecastAlerts: [], weekoffSwapRequests: [], holidays: [], schedule: [], attendance: [] }),
 
   loadAll: async () => {
     set({ loading: true });
     const repo = get().repo;
-    const [users, departments, leaves, holidays, rules, leaveWindow, schedule, attendance] = await Promise.all([
+    const [users, departments, leaves, forecastAlerts, weekoffSwapRequests, holidays, rules, leaveWindow, schedule, attendance] = await Promise.all([
       repo.getUsers(),
       repo.getDepartments(),
       repo.getAllLeaves(),
+      repo.getForecastAlerts(),
+      repo.getWeekoffSwapRequests(),
       repo.getHolidays(),
       repo.getRules(),
       repo.getLeaveWindow(),
       repo.getSchedule(),
       repo.getAttendance(),
     ]);
-    set({ users, departments, leaves, holidays, rules, leaveWindow, schedule, attendance, loading: false });
+    set({ users, departments, leaves, forecastAlerts, weekoffSwapRequests, holidays, rules, leaveWindow, schedule, attendance, loading: false });
   },
 
   refreshLeaves: async () => {
     const leaves = await get().repo.getAllLeaves();
     set({ leaves });
+  },
+  refreshForecastAlerts: async () => {
+    const forecastAlerts = await get().repo.getForecastAlerts();
+    set({ forecastAlerts });
+  },
+  refreshWeekoffSwapRequests: async () => {
+    const weekoffSwapRequests = await get().repo.getWeekoffSwapRequests();
+    set({ weekoffSwapRequests });
   },
   refreshHolidays: async () => {
     const holidays = await get().repo.getHolidays();

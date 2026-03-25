@@ -12,9 +12,14 @@ interface ModalProps {
 
 export default function Modal({ open, onClose, title, children }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape') onClose();
+    if (e.key === 'Escape') onCloseRef.current();
     if (e.key === 'Tab' && panelRef.current) {
       const focusable = panelRef.current.querySelectorAll<HTMLElement>(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
@@ -30,12 +35,12 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
         first.focus();
       }
     }
-  }, [onClose]);
+  }, []);
 
   useEffect(() => {
     if (open) {
       document.addEventListener('keydown', handleKeyDown);
-      panelRef.current?.querySelector<HTMLElement>('button, input')?.focus();
+      panelRef.current?.querySelector<HTMLElement>('textarea, input, select, button, [href]')?.focus();
     }
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [open, handleKeyDown]);
@@ -55,7 +60,7 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
             aria-modal="true"
             aria-label={title}
             {...modalPanel}
-            className="relative z-10 glass-card-featured p-6 w-full max-w-lg mx-4 max-h-[85vh] overflow-y-auto scrollbar-thin"
+            className="relative z-10 glass-card-featured p-6 w-full max-w-lg mx-4 max-h-[85vh] overflow-y-auto scrollbar-hidden"
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold tracking-heading">{title}</h2>

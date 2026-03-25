@@ -16,5 +16,6 @@ export const LEAVE_STATUS_LABELS: Record<string, string> = {
 export const ROLE_ROUTES: Record<string, string> = {
   agent: '/agent/home',
   supervisor: '/supervisor/home',
+  manager: '/manager/analytics',
   admin: '/admin/uploads/schedule',
 };

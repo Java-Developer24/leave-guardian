@@ -26,15 +26,22 @@ const navSections: Record<string, { label: string; items: { to: string; label: s
     { label: 'Management', items: [
       { to: '/supervisor/approvals', label: 'Approvals', icon: CheckSquare },
       { to: '/supervisor/team', label: 'Team Overview', icon: Users },
+      { to: '/supervisor/schedule', label: 'Week Schedule', icon: Calendar },
     ]},
     { label: 'Insights', items: [
       { to: '/supervisor/analytics', label: 'Analytics', icon: BarChart3 },
+    ]},
+  ],
+  manager: [
+    { label: 'Insights', items: [
+      { to: '/manager/analytics', label: 'Analytics', icon: BarChart3 },
     ]},
   ],
   admin: [
     { label: 'Data', items: [
       { to: '/admin/uploads/schedule', label: 'Upload Schedule', icon: Upload },
       { to: '/admin/uploads/attendance', label: 'Upload Attendance', icon: Upload },
+      { to: '/admin/weekoff-swaps', label: 'Week-Off Approvals', icon: CheckSquare },
     ]},
     { label: 'Configuration', items: [
       { to: '/admin/config', label: 'Configuration', icon: Settings },
@@ -46,15 +53,16 @@ const navSections: Record<string, { label: string; items: { to: string; label: s
   ],
 };
 
-const roleLabels: Record<string, string> = { agent: 'Agent', supervisor: 'Supervisor', admin: 'Admin' };
+const roleLabels: Record<string, string> = { agent: 'Guide', supervisor: 'Supervisor', manager: 'Manager', admin: 'Admin' };
 const roleBadgeColors: Record<string, string> = {
   agent: 'bg-info/10 text-info border-info/20',
   supervisor: 'bg-accent/10 text-accent border-accent/20',
+  manager: 'bg-primary/10 text-primary border-primary/20',
   admin: 'bg-primary/10 text-primary border-primary/20',
 };
 
 function getPageTitle(pathname: string): string {
-  const allSections = [...(navSections.agent ?? []), ...(navSections.supervisor ?? []), ...(navSections.admin ?? [])];
+  const allSections = [...(navSections.agent ?? []), ...(navSections.supervisor ?? []), ...(navSections.manager ?? []), ...(navSections.admin ?? [])];
   return allSections.flatMap(s => s.items).find(i => i.to === pathname)?.label ?? 'Dashboard';
 }
 
@@ -107,7 +115,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {!collapsed && (
             <div>
               <h1 className="text-base font-extrabold text-foreground tracking-heading font-heading">LSM</h1>
-              <p className="text-[8px] text-muted-foreground tracking-[0.15em] uppercase font-heading mt-0.5">Leave & Shrinkage</p>
+              <p className="text-[8px] text-muted-foreground tracking-[0.15em] uppercase font-heading mt-0.5">Leave & Shrinkage Manager Tool</p>
             </div>
           )}
         </div>
