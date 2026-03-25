@@ -8,6 +8,7 @@ import SectionHeader from '@/components/SectionHeader';
 import StatusChip from '@/components/StatusChip';
 import Modal from '@/components/modals/Modal';
 import { formatBufferAlert, formatDate, getApprovalCountdown } from '@/core/utils/dates';
+import { useLiveNow } from '@/hooks/use-live-now';
 import { showToast } from '@/components/toasts/ToastContainer';
 import {
   Calendar,
@@ -101,12 +102,13 @@ export default function AgentHome() {
 
   const getUserName = (id: string) => users.find(user => user.id === id)?.name ?? id;
 
-  const now = new Date();
-  const currentMonthKey = getMonthKey(now);
-  const currentMonthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  const currentMonthShort = now.toLocaleDateString('en-US', { month: 'long' });
-  const getBufferAlert = (date: string) => formatBufferAlert(date, 72, now);
-  const getApprovalTimer = (submittedAt?: string) => submittedAt ? getApprovalCountdown(submittedAt, 72, now) : null;
+  const pageNow = useMemo(() => new Date(), []);
+  const liveNow = useLiveNow();
+  const currentMonthKey = getMonthKey(pageNow);
+  const currentMonthLabel = pageNow.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const currentMonthShort = pageNow.toLocaleDateString('en-US', { month: 'long' });
+  const getBufferAlert = (date: string) => formatBufferAlert(date, 72, liveNow);
+  const getApprovalTimer = (submittedAt?: string) => submittedAt ? getApprovalCountdown(submittedAt, 72, liveNow) : null;
 
   const monthlyUsed = myOwnLeaves.filter(leave =>
     ['Approved', 'PendingSupervisor', 'Submitted'].includes(leave.status) &&
@@ -115,7 +117,7 @@ export default function AgentHome() {
 
   const monthlyBreakdown = useMemo(() => {
     return Array.from({ length: 3 }, (_, index) => {
-      const d = new Date(now.getFullYear(), now.getMonth() - (2 - index), 1);
+      const d = new Date(pageNow.getFullYear(), pageNow.getMonth() - (2 - index), 1);
       const monthKey = getMonthKey(d);
       const monthLabel = d.toLocaleDateString('en-US', { month: 'short' });
       const monthLeaves = myOwnLeaves.filter(leave => leave.date.startsWith(monthKey));
@@ -126,7 +128,7 @@ export default function AgentHome() {
         approved: monthLeaves.filter(leave => leave.status === 'Approved').length,
       };
     });
-  }, [myOwnLeaves, now]);
+  }, [myOwnLeaves, pageNow]);
 
   const incomingSwapActions = useMemo(
     () => leaves
@@ -246,6 +248,7 @@ export default function AgentHome() {
                 const approvalTimer = ['PendingSupervisor', 'Submitted'].includes(leave.status)
                   ? getApprovalTimer(leave.history[0]?.at)
                   : null;
+                const visibleApprovalTimer = approvalTimer && !approvalTimer.overdue ? approvalTimer : null;
 
                 return (
                   <motion.div
@@ -264,13 +267,9 @@ export default function AgentHome() {
                         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                           <span className="text-[9px] bg-secondary/50 px-2 py-0.5 rounded-md font-medium border border-border/15">{leave.type}</span>
                           {leave.peerId && <span className="text-[9px] text-muted-foreground">with {getUserName(leave.peerId)}</span>}
-                          {approvalTimer && (
-                            <span className={`text-[9px] px-2 py-0.5 rounded-md font-semibold border ${
-                              approvalTimer.overdue
-                                ? 'bg-destructive/10 text-destructive border-destructive/15'
-                                : 'bg-warning/10 text-warning border-warning/15'
-                            }`}>
-                              {approvalTimer.text}
+                          {visibleApprovalTimer && (
+                            <span className="text-[9px] px-2 py-0.5 rounded-md font-semibold border bg-warning/10 text-warning border-warning/15">
+                              {visibleApprovalTimer.text}
                             </span>
                           )}
                         </div>

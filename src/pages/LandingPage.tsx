@@ -104,11 +104,11 @@ const features = [
   {
     icon: Shield,
     title: 'Role-Based Workflows',
-    description: 'Purpose-built dashboards for every role. Multi-level approvals, swap requests, and real-time status propagation.',
+    description: 'Purpose-built dashboards for every role, from guides to managers. Multi-level approvals, swap requests, and real-time status propagation.',
     accent: 'info' as const,
     metric: '60%',
     metricLabel: 'fewer escalations',
-    items: ['Agent / Supervisor / Admin views', 'Multi-level approval chains', 'Swap & transfer handling'],
+    items: ['Guide / Supervisor / Manager / Admin views', 'Multi-level approval chains', 'Swap & transfer handling'],
   },
 ];
 
@@ -128,6 +128,13 @@ const roles = [
     icon: Activity,
   },
   {
+    role: 'Manager',
+    desc: 'Track department and supervisor performance, review forecast risks, and compare team-level schedule visibility before decisions are made.',
+    items: ['Department insights', 'Supervisor performance views', 'Cross-team schedule visibility', 'Forecast review oversight'],
+    color: 'manager',
+    icon: LineChart,
+  },
+  {
     role: 'Admin',
     desc: 'Upload schedules, configure policies, manage holidays, and access organization-wide performance analytics.',
     items: ['Bulk schedule uploads', 'Leave window control', 'Shrinkage rule engine', 'Department analytics'],
@@ -137,17 +144,18 @@ const roles = [
 ];
 
 const capabilities = [
-  { icon: LineChart, title: 'Live Analytics', desc: 'Real-time shrinkage monitoring with predictive alerts' },
+  { icon: LineChart, title: 'Live Analytics', desc: 'Real-time shrinkage monitoring across guide, supervisor, and manager views' },
   { icon: Bell, title: 'Smart Notifications', desc: 'Instant status updates across all approval stages' },
   { icon: Lock, title: 'Enterprise Security', desc: 'Role-based access control with audit logging' },
   { icon: Workflow, title: 'Automated Workflows', desc: 'Multi-level approvals with zero manual overhead' },
   { icon: Database, title: 'Data Integration', desc: 'CSV/JSON imports for schedules and attendance' },
-  { icon: Eye, title: 'Full Visibility', desc: 'Organization-wide dashboards for every stakeholder' },
+  { icon: Eye, title: 'Full Visibility', desc: 'Manager and admin dashboards with organization-wide visibility' },
 ];
 
 const testimonials = [
   { name: 'Sarah Chen', role: 'Operations Director', text: 'LSM reduced our leave management overhead by 60%. The shrinkage analytics alone are worth it.', rating: 5, company: 'TechServe Inc.' },
   { name: 'James Okafor', role: 'Team Lead', text: 'The approval workflow is seamless. I can see shrinkage impact before approving — game changer.', rating: 5, company: 'GlobalConnect' },
+  { name: 'Maya Patel', role: 'Manager', text: 'The team and department analytics finally give me one place to compare schedules, risks, and supervisor performance.', rating: 5, company: 'SupportGrid' },
   { name: 'Priya Mehta', role: 'HR Manager', text: 'Finally a tool that understands contact center dynamics. Setup took 30 minutes.', rating: 5, company: 'VoiceFirst' },
 ];
 
@@ -160,6 +168,7 @@ const featureAccentMap: Record<string, { iconBg: string; iconColor: string; metr
 const roleAccentMap: Record<string, { bg: string; text: string; border: string; glow: string }> = {
   primary: { bg: 'bg-primary/8', text: 'text-primary', border: 'border-primary/15', glow: 'hover:shadow-[0_20px_60px_hsla(354,100%,64%,0.1)]' },
   accent: { bg: 'bg-accent/8', text: 'text-accent', border: 'border-accent/15', glow: 'hover:shadow-[0_20px_60px_hsla(35,100%,60%,0.1)]' },
+  manager: { bg: 'bg-success/8', text: 'text-success', border: 'border-success/15', glow: 'hover:shadow-[0_20px_60px_hsla(152,69%,42%,0.1)]' },
   info: { bg: 'bg-info/8', text: 'text-info', border: 'border-info/15', glow: 'hover:shadow-[0_20px_60px_hsla(215,100%,58%,0.1)]' },
 };
 
@@ -221,8 +230,8 @@ export default function LandingPage() {
             transition={{ delay: 0.3, duration: 0.6 }}
             className="text-lg md:text-xl text-muted-foreground/80 mt-8 max-w-2xl mx-auto leading-relaxed font-medium"
           >
-            Empower your teams with intelligent leave scheduling, real-time shrinkage analytics, 
-            and automated approval workflows — built for modern contact centers.
+            Empower guides, supervisors, managers, and admins with intelligent leave scheduling,
+            real-time shrinkage analytics, and automated approval workflows built for modern contact centers.
           </motion.p>
 
           <motion.div
@@ -413,11 +422,11 @@ export default function LandingPage() {
             Built for Every <span className="gradient-text">Role</span>
           </h2>
           <p className="text-muted-foreground/60 mt-5 max-w-lg mx-auto text-lg">
-            Tailored experiences for agents, supervisors, and administrators.
+            Tailored experiences for guides, supervisors, managers, and administrators.
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 lg:gap-8">
           {roles.map((r, i) => {
             const colors = roleAccentMap[r.color];
             return (
@@ -461,7 +470,7 @@ export default function LandingPage() {
             Trusted by <span className="gradient-text">Leaders</span>
           </h2>
         </motion.div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
           {testimonials.map((t, i) => (
             <motion.div
               key={t.name}
@@ -512,7 +521,7 @@ export default function LandingPage() {
                 <br />Your Workflow?
               </h2>
               <p className="text-muted-foreground/60 mt-6 max-w-lg mx-auto text-lg">
-                Start managing leaves and shrinkage with data-driven precision. No credit card required.
+                Start managing leaves, shrinkage, schedules, and approvals with data-driven precision across every role. No credit card required.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-12">
                 <Link to="/login" className="btn-primary-gradient text-primary-foreground font-bold px-14 py-5 rounded-2xl text-base inline-flex items-center gap-3 group shadow-2xl shadow-primary/25">

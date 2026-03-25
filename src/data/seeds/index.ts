@@ -439,9 +439,32 @@ const generateLeaves = (): LeaveRequest[] => {
         { at: '2026-03-23', by: 'a9', action: 'Submitted', note: 'Requested swap with peer' },
       ],
     },
+    {
+      id: 'l9015',
+      requesterId: 'a1',
+      departmentId: 'd1',
+      type: 'Swap',
+      date: '2026-03-31',
+      peerLeaveDate: '2026-03-29',
+      days: 1,
+      reason: 'Approved swap for month-end family plans',
+      peerId: 'a2',
+      status: 'Approved',
+      history: [
+        { at: '2026-03-25T09:00:00.000Z', by: 'a1', action: 'Submitted' },
+        { at: '2026-03-25T11:00:00.000Z', by: 'a2', action: 'Accepted by Peer' },
+        { at: '2026-03-25T13:00:00.000Z', by: 'sup1', action: 'Approved', note: 'Approved for balanced coverage' },
+      ],
+    },
   );
 
-  return leaves.filter(leave => !(leave.requesterId === 'a1' && leave.date.startsWith('2026-03')));
+  const keepGuideMarchLeaves = new Set(['l9001', 'l9005', 'l9015']);
+
+  return leaves.filter(leave => !(
+    leave.requesterId === 'a1' &&
+    leave.date.startsWith('2026-03') &&
+    !keepGuideMarchLeaves.has(leave.id)
+  ));
 };
 
 export const seedLeaves: LeaveRequest[] = generateLeaves();

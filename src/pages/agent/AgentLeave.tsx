@@ -11,6 +11,7 @@ import { isDayBlocked, agentMonthlyCount } from '@/core/utils/shrinkage';
 import { validateReason, validateDateSelection } from '@/core/utils/validation';
 import { showToast } from '@/components/toasts/ToastContainer';
 import type { LeaveSubmissionPreview } from '@/core/entities';
+import { useLiveNow } from '@/hooks/use-live-now';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Send,
@@ -92,6 +93,8 @@ export default function AgentLeave() {
   const [submissionPreview, setSubmissionPreview] = useState<LeaveSubmissionPreview[]>([]);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [submittedApprovalModalOpen, setSubmittedApprovalModalOpen] = useState(false);
+  const [submittedRequestInfo, setSubmittedRequestInfo] = useState<{ dates: string[]; submittedAt: string } | null>(null);
 
   const [swapPeer, setSwapPeer] = useState('');
   const [swapMyDate, setSwapMyDate] = useState(prefetchedSwapDate);
@@ -104,6 +107,8 @@ export default function AgentLeave() {
       setSwapMyDate(searchParams.get('date') ?? '');
     }
   }, [searchParams]);
+
+  const liveNow = useLiveNow();
 
   const windowOpen = leaveWindow.open && isTodayInWindowForMonth(leaveWindow);
   const holidayMap = useMemo(() => {
@@ -186,14 +191,11 @@ export default function AgentLeave() {
     const message = formatBufferAlert(date, 72, today);
     return message ? [{ date, message }] : [];
   });
-  const pendingSupervisorLeaves = useMemo(
-    () => myLeaves
-      .filter(leave => ['PendingSupervisor', 'Submitted'].includes(leave.status))
-      .sort((a, b) => (a.history[0]?.at ?? a.date).localeCompare(b.history[0]?.at ?? b.date)),
-    [myLeaves],
-  );
   const swapMyDateBufferAlert = swapMyDate ? formatBufferAlert(swapMyDate, 72, today) : null;
   const swapPeerDateBufferAlert = swapPeerDate ? formatBufferAlert(swapPeerDate, 72, today) : null;
+  const submittedApprovalTimer = submittedRequestInfo
+    ? getApprovalCountdown(submittedRequestInfo.submittedAt, 72, liveNow)
+    : null;
 
   const resetSubmissionFlow = () => {
     setReviewModalOpen(false);
@@ -234,8 +236,10 @@ export default function AgentLeave() {
 
     setSubmitting(true);
     try {
+      const createdLeaves = [];
+
       for (const date of uniqueDates) {
-        await repo.createLeave({
+        const createdLeave = await repo.createLeave({
           requesterId: currentUser!.id,
           departmentId: currentUser!.departmentId!,
           type: leaveType,
@@ -244,10 +248,16 @@ export default function AgentLeave() {
           reason,
           status: 'PendingSupervisor',
         });
+        createdLeaves.push(createdLeave);
       }
 
       await Promise.all([refreshLeaves(), refreshForecastAlerts()]);
       showToast(`${uniqueDates.length} leave request(s) submitted`, 'success');
+      setSubmittedRequestInfo({
+        dates: uniqueDates,
+        submittedAt: createdLeaves[0]?.history[0]?.at ?? new Date().toISOString(),
+      });
+      setSubmittedApprovalModalOpen(true);
       setSelectedDates([]);
       setReason('');
       setErrors([]);
@@ -333,7 +343,7 @@ export default function AgentLeave() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,380px)] gap-6 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.28fr)_minmax(300px,360px)] gap-5 items-start">
             <div className="space-y-4">
               <div className="bg-card border border-border rounded-xl p-5">
                 <h3 className="text-xs font-bold mb-3 font-heading flex items-center gap-2">
@@ -359,9 +369,9 @@ export default function AgentLeave() {
                 </p>
               </div>
 
-              <div className="bg-card border border-border rounded-xl p-4">
+              <div className="bg-card border border-border rounded-xl p-5">
                 <h3 className="text-xs font-bold mb-3 font-heading">Legend & Day Status</h3>
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {[
                     { title: 'Quota used', desc: `${quotaUsed} of ${rules.agentMonthlyLeaveCap} planned leaves used for ${currentMonthLabel}`, tone: 'border-success/20 bg-success/8 text-success' },
                     { title: 'Pending request', desc: `${visiblePendingDates.length} planned day(s) are waiting on approval in ${currentMonthLabel}`, tone: 'border-info/20 bg-info/8 text-info' },
@@ -424,30 +434,6 @@ export default function AgentLeave() {
                   <label htmlFor="reason" className="block text-[10px] tracking-section uppercase text-muted-foreground mb-1.5 font-semibold">Reason *</label>
                   <textarea id="reason" value={reason} onChange={event => setReason(event.target.value)} rows={3} maxLength={200} className="glass-input resize-none text-sm" placeholder="Enter reason..." />
                   <div className="text-right text-[10px] text-muted-foreground/40 mt-0.5">{reason.length}/200</div>
-                </div>
-
-                <div className="rounded-xl border border-border bg-background/80 p-4">
-                  <div className="text-[10px] tracking-section uppercase text-muted-foreground mb-2 font-semibold">Pending Approval SLA</div>
-                  {pendingSupervisorLeaves.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">No supervisor approvals are pending yet.</p>
-                  ) : (
-                    <div className="space-y-2.5">
-                      {pendingSupervisorLeaves.slice(0, 3).map(leave => {
-                        const timer = getApprovalCountdown(leave.history[0]?.at ?? leave.date, 72, today);
-                        return (
-                          <div key={leave.id} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card/70 px-3 py-2">
-                            <div>
-                              <div className="text-xs font-semibold">{formatDate(leave.date)}</div>
-                              <div className="text-[10px] text-muted-foreground">{leave.type} • {leave.status}</div>
-                            </div>
-                            <span className={`text-[10px] font-bold ${timer.overdue ? 'text-destructive' : 'text-warning'}`}>
-                              {timer.text}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
                 </div>
 
                 {errors.length > 0 && (
@@ -591,32 +577,24 @@ export default function AgentLeave() {
             <div className="mt-1 text-xs text-muted-foreground">{reason}</div>
           </div>
 
-          <div className="space-y-3">
-            {submissionPreview.map(preview => (
-              <div key={preview.date} className="rounded-xl border border-border p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-bold">{formatDate(preview.date)}</div>
-                    <div className="text-[11px] text-muted-foreground">Forecast volume {preview.forecastVolume} • Required guides {preview.requiredGuides}</div>
-                  </div>
-                  {preview.needsManagerReview ? (
-                    <span className="rounded-full border border-warning/20 bg-warning/10 px-3 py-1 text-[10px] font-bold text-warning">Manager review</span>
-                  ) : (
-                    <span className="rounded-full border border-success/20 bg-success/10 px-3 py-1 text-[10px] font-bold text-success">Coverage ok</span>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-3 mt-3 text-xs">
-                  <div className="rounded-lg border border-border bg-background/80 p-3">
-                    <div className="text-muted-foreground">Shrinkage</div>
-                    <div className="mt-1 font-semibold">{preview.shrinkageBefore}% to {preview.shrinkageAfter}%</div>
-                  </div>
-                  <div className="rounded-lg border border-border bg-background/80 p-3">
-                    <div className="text-muted-foreground">Available guides after approval</div>
-                    <div className="mt-1 font-semibold">{preview.availableGuidesAfterApproval} of {preview.scheduledGuides}</div>
-                  </div>
-                </div>
+          <div className="rounded-xl border border-border bg-background/80 p-4">
+            <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60 font-heading">Selected Dates</div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {[...selectedDates].sort().map(date => (
+                <span key={date} className="inline-flex rounded-lg border border-primary/15 bg-primary/8 px-3 py-1.5 text-xs font-semibold text-primary">
+                  {formatDate(date)}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-info/20 bg-info/10 px-4 py-3 text-xs text-info">
+            Guide view only shows your request summary. Coverage and manager-level checks continue automatically after submission.
+            {submissionPreview.some(preview => preview.needsManagerReview) && (
+              <div className="mt-2 font-semibold">
+                Some selected dates will also be routed for additional internal coverage review after you submit.
               </div>
-            ))}
+            )}
           </div>
 
           <div className="flex justify-end gap-3">
@@ -635,6 +613,9 @@ export default function AgentLeave() {
           <p className="text-sm text-muted-foreground">
             This will submit the selected leave dates for supervisor approval. Dates that require manager review will also appear in the manager forecast tab.
           </p>
+          <div className="rounded-xl border border-info/20 bg-info/10 px-4 py-3 text-xs font-semibold text-info">
+            Once submitted, the supervisor has 72 hours to approve this leave request. The live countdown will appear across your guide dashboard and leave summary.
+          </div>
           <div className="rounded-xl border border-border bg-muted/20 p-4 text-sm">
             <div className="font-semibold">{selectedDates.length} day(s) selected</div>
             <div className="text-muted-foreground mt-1">{[...selectedDates].sort().map(date => formatDate(date)).join(', ')}</div>
@@ -655,6 +636,51 @@ export default function AgentLeave() {
             </button>
             <button onClick={handleSubmit} disabled={submitting} className="px-5 py-2.5 rounded-xl btn-primary-gradient text-primary-foreground text-sm font-bold disabled:opacity-50">
               {submitting ? 'Submitting...' : 'Confirm Submit'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={submittedApprovalModalOpen}
+        onClose={() => {
+          setSubmittedApprovalModalOpen(false);
+          setSubmittedRequestInfo(null);
+        }}
+        title="Leave Submitted"
+      >
+        <div className="space-y-5">
+          <p className="text-sm text-muted-foreground">
+            Your leave request has been submitted successfully. The supervisor approval timer has started now.
+          </p>
+          <div className="rounded-xl border border-border bg-muted/20 p-4 text-sm">
+            <div className="font-semibold">{submittedRequestInfo?.dates.length ?? 0} day(s) submitted</div>
+            <div className="text-muted-foreground mt-1">
+              {(submittedRequestInfo?.dates ?? []).map(date => formatDate(date)).join(', ')}
+            </div>
+          </div>
+          {submittedApprovalTimer && (
+            <div className={`rounded-xl border px-4 py-3 ${
+              submittedApprovalTimer.overdue
+                ? 'border-destructive/15 bg-destructive/10 text-destructive'
+                : 'border-warning/15 bg-warning/10 text-warning'
+            }`}>
+              <div className="text-[10px] uppercase tracking-[0.16em] font-heading opacity-80">Supervisor Approval Timer</div>
+              <div className="mt-2 text-lg font-black font-heading">{submittedApprovalTimer.text}</div>
+              <div className="mt-1 text-xs opacity-80">
+                Supervisor approval must be completed within 72 hours from submission.
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end">
+            <button
+              onClick={() => {
+                setSubmittedApprovalModalOpen(false);
+                setSubmittedRequestInfo(null);
+              }}
+              className="px-5 py-2.5 rounded-xl btn-primary-gradient text-primary-foreground text-sm font-bold"
+            >
+              Close
             </button>
           </div>
         </div>

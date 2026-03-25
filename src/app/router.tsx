@@ -13,11 +13,13 @@ import SupervisorTeam from '@/pages/supervisor/SupervisorTeam';
 import SupervisorSchedule from '@/pages/supervisor/SupervisorSchedule';
 import SupervisorAnalytics from '@/pages/supervisor/SupervisorAnalytics';
 import ManagerAnalytics from '@/pages/manager/ManagerAnalytics';
+import ManagerSchedule from '@/pages/manager/ManagerSchedule';
 import AdminScheduleUpload from '@/pages/admin/uploads/AdminScheduleUpload';
 import AdminAttendanceUpload from '@/pages/admin/uploads/AdminAttendanceUpload';
 import AdminConfig from '@/pages/admin/config/AdminConfig';
 import AdminHolidays from '@/pages/admin/config/AdminHolidays';
 import AdminAnalytics from '@/pages/admin/AdminAnalytics';
+import AdminSchedule from '@/pages/admin/AdminSchedule';
 import AdminWeekoffApprovals from '@/pages/admin/AdminWeekoffApprovals';
 
 function RoleGuard({ role, children }: { role: string; children: React.ReactNode }) {
@@ -46,10 +48,12 @@ export default function AppRouter() {
         <Route path="/supervisor/analytics" element={<RoleGuard role="supervisor"><SupervisorAnalytics /></RoleGuard>} />
 
         <Route path="/manager/analytics" element={<RoleGuard role="manager"><ManagerAnalytics /></RoleGuard>} />
+        <Route path="/manager/schedule" element={<RoleGuard role="manager"><ManagerSchedule /></RoleGuard>} />
 
         <Route path="/admin/uploads/schedule" element={<RoleGuard role="admin"><AdminScheduleUpload /></RoleGuard>} />
         <Route path="/admin/uploads/attendance" element={<RoleGuard role="admin"><AdminAttendanceUpload /></RoleGuard>} />
         <Route path="/admin/weekoff-swaps" element={<RoleGuard role="admin"><AdminWeekoffApprovals /></RoleGuard>} />
+        <Route path="/admin/schedule" element={<RoleGuard role="admin"><AdminSchedule /></RoleGuard>} />
         <Route path="/admin/config" element={<RoleGuard role="admin"><AdminConfig /></RoleGuard>} />
         <Route path="/admin/config/holidays" element={<RoleGuard role="admin"><AdminHolidays /></RoleGuard>} />
         <Route path="/admin/analytics" element={<RoleGuard role="admin"><AdminAnalytics /></RoleGuard>} />

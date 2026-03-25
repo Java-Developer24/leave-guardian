@@ -8,6 +8,7 @@ import StatusChip from '@/components/StatusChip';
 import Modal from '@/components/modals/Modal';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { formatBufferAlert, formatDate, getApprovalCountdown } from '@/core/utils/dates';
+import { useLiveNow } from '@/hooks/use-live-now';
 import { showToast } from '@/components/toasts/ToastContainer';
 import {
   Clock,
@@ -65,7 +66,8 @@ export default function AgentSummary() {
   const { currentUser, leaves, repo, users, departments } = useAppStore();
   const refreshLeaves = useAppStore(state => state.refreshLeaves);
   const refreshForecastAlerts = useAppStore(state => state.refreshForecastAlerts);
-  const today = new Date();
+  const today = useMemo(() => new Date(), []);
+  const liveNow = useLiveNow();
   const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
   const currentMonthKey = getMonthKey(currentMonthStart);
   const todayKey = today.toISOString().slice(0, 10);
@@ -89,8 +91,8 @@ export default function AgentSummary() {
   const monthButtonLabel = visibleMonth.toLocaleDateString('en-US', { month: 'long' });
 
   const getUserName = (id: string) => users.find(user => user.id === id)?.name ?? id;
-  const getBufferAlert = (date: string) => formatBufferAlert(date, 72, today);
-  const getApprovalTimer = (submittedAt?: string) => submittedAt ? getApprovalCountdown(submittedAt, 72, today) : null;
+  const getBufferAlert = (date: string) => formatBufferAlert(date, 72, liveNow);
+  const getApprovalTimer = (submittedAt?: string) => submittedAt ? getApprovalCountdown(submittedAt, 72, liveNow) : null;
 
   const deptPeers = useMemo(
     () => users.filter(user => user.role === 'agent' && user.departmentId === currentUser?.departmentId && user.id !== currentUser?.id),
@@ -304,6 +306,7 @@ export default function AgentSummary() {
             <div className="space-y-3">
               {pendingSupervisorLeaves.slice(0, 3).map(leave => {
                 const timer = getApprovalTimer(leave.history[0]?.at);
+                const visibleTimer = timer && !timer.overdue ? timer : null;
                 return (
                   <div key={leave.id} className="rounded-xl border border-border bg-background/80 px-4 py-3">
                     <div className="flex items-start justify-between gap-3">
@@ -313,13 +316,9 @@ export default function AgentSummary() {
                       </div>
                       <StatusChip status={leave.status} />
                     </div>
-                    {timer && (
-                      <div className={`mt-3 inline-flex rounded-full border px-3 py-1 text-[10px] font-bold ${
-                        timer.overdue
-                          ? 'border-destructive/15 bg-destructive/10 text-destructive'
-                          : 'border-warning/15 bg-warning/10 text-warning'
-                      }`}>
-                        {timer.text}
+                    {visibleTimer && (
+                      <div className="mt-3 inline-flex rounded-full border border-warning/15 bg-warning/10 px-3 py-1 text-[10px] font-bold text-warning">
+                        {visibleTimer.text}
                       </div>
                     )}
                   </div>
@@ -356,15 +355,18 @@ export default function AgentSummary() {
                   ? 'Swap and cancel actions are available for this request.'
                   : 'This request is linked to a peer flow, so direct swap actions stay limited.'}
               </div>
-              {(['PendingSupervisor', 'Submitted'].includes(nextActionableLeave.status)) && getApprovalTimer(nextActionableLeave.history[0]?.at) && (
-                <div className={`rounded-xl border px-4 py-3 text-xs font-semibold ${
-                  getApprovalTimer(nextActionableLeave.history[0]?.at)?.overdue
-                    ? 'border-destructive/15 bg-destructive/10 text-destructive'
-                    : 'border-warning/15 bg-warning/10 text-warning'
-                }`}>
-                  Approval timer: {getApprovalTimer(nextActionableLeave.history[0]?.at)?.text}
-                </div>
-              )}
+              {(() => {
+                const nextApprovalTimer = ['PendingSupervisor', 'Submitted'].includes(nextActionableLeave.status)
+                  ? getApprovalTimer(nextActionableLeave.history[0]?.at)
+                  : null;
+                if (!nextApprovalTimer || nextApprovalTimer.overdue) return null;
+
+                return (
+                  <div className="rounded-xl border border-warning/15 bg-warning/10 px-4 py-3 text-xs font-semibold text-warning">
+                    Approval timer: {nextApprovalTimer.text}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </motion.div>
@@ -408,6 +410,7 @@ export default function AgentSummary() {
                 const approvalTimer = leave.requesterId === currentUser?.id && ['PendingSupervisor', 'Submitted'].includes(leave.status)
                   ? getApprovalTimer(leave.history[0]?.at)
                   : null;
+                const visibleApprovalTimer = approvalTimer && !approvalTimer.overdue ? approvalTimer : null;
 
                 return (
                   <motion.tr key={leave.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: index * 0.02 }}>
@@ -429,11 +432,9 @@ export default function AgentSummary() {
                             {transferContext || swapContext}
                           </div>
                         )}
-                        {approvalTimer && (
-                          <div className={`text-[10px] font-semibold ${
-                            approvalTimer.overdue ? 'text-destructive' : 'text-warning'
-                          }`}>
-                            {approvalTimer.text}
+                        {visibleApprovalTimer && (
+                          <div className="text-[10px] font-semibold text-warning">
+                            {visibleApprovalTimer.text}
                           </div>
                         )}
                       </div>
@@ -475,6 +476,7 @@ export default function AgentSummary() {
             const approvalTimer = leave.requesterId === currentUser?.id && ['PendingSupervisor', 'Submitted'].includes(leave.status)
               ? getApprovalTimer(leave.history[0]?.at)
               : null;
+            const visibleApprovalTimer = approvalTimer && !approvalTimer.overdue ? approvalTimer : null;
 
             return (
               <div key={leave.id} className="p-4 space-y-2">
@@ -486,9 +488,9 @@ export default function AgentSummary() {
                 {(transferContext || swapContext) && (
                   <div className="text-xs text-muted-foreground">{transferContext || swapContext}</div>
                 )}
-                {approvalTimer && (
-                  <div className={`text-xs font-semibold ${approvalTimer.overdue ? 'text-destructive' : 'text-warning'}`}>
-                    {approvalTimer.text}
+                {visibleApprovalTimer && (
+                  <div className="text-xs font-semibold text-warning">
+                    {visibleApprovalTimer.text}
                   </div>
                 )}
                 {leave.reason && <div className="text-xs text-muted-foreground truncate">{leave.reason}</div>}

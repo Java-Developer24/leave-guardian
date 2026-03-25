@@ -33,6 +33,9 @@ const navSections: Record<string, { label: string; items: { to: string; label: s
     ]},
   ],
   manager: [
+    { label: 'Operations', items: [
+      { to: '/manager/schedule', label: 'Schedule View', icon: Calendar },
+    ]},
     { label: 'Insights', items: [
       { to: '/manager/analytics', label: 'Analytics', icon: BarChart3 },
     ]},
@@ -42,6 +45,9 @@ const navSections: Record<string, { label: string; items: { to: string; label: s
       { to: '/admin/uploads/schedule', label: 'Upload Schedule', icon: Upload },
       { to: '/admin/uploads/attendance', label: 'Upload Attendance', icon: Upload },
       { to: '/admin/weekoff-swaps', label: 'Week-Off Approvals', icon: CheckSquare },
+    ]},
+    { label: 'Operations', items: [
+      { to: '/admin/schedule', label: 'Schedule View', icon: Calendar },
     ]},
     { label: 'Configuration', items: [
       { to: '/admin/config', label: 'Configuration', icon: Settings },
