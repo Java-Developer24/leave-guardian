@@ -78,15 +78,15 @@ export const seedLeaveWindow: LeaveWindow = { open: true, startDay: 22, endDay: 
 
 export const seedHolidays: Holiday[] = [
   { id: "h1", name: "Republic Day", date: "2026-01-26", type: "National", allowedShrinkagePct: 15 },
-  { id: "h2", name: "Valentine's Day", date: "2026-02-14", type: "Festival" },
-  { id: "h3", name: "Holi", date: "2026-03-10", type: "Festival", allowedShrinkagePct: 15 },
-  { id: "h4", name: "Good Friday", date: "2026-04-03", type: "National", allowedShrinkagePct: 12 },
-  { id: "h5", name: "May Day", date: "2026-05-01", type: "National" },
-  { id: "h6", name: "Independence Day", date: "2026-08-15", type: "National", allowedShrinkagePct: 15 },
-  { id: "h7", name: "Gandhi Jayanti", date: "2026-10-02", type: "National" },
-  { id: "h8", name: "Diwali", date: "2026-11-08", type: "Festival", allowedShrinkagePct: 20 },
-  { id: "h9", name: "Christmas", date: "2026-12-25", type: "National", allowedShrinkagePct: 15 },
-  { id: "h10", name: "Company Foundation Day", date: "2026-06-15", type: "Company" },
+  
+  { id: "h2", name: "Holi", date: "2026-03-10", type: "Festival", allowedShrinkagePct: 15 },
+  { id: "h3", name: "Good Friday", date: "2026-04-03", type: "National", allowedShrinkagePct: 12 },
+  { id: "h4", name: "May Day", date: "2026-05-01", type: "National" },
+  { id: "h5", name: "Independence Day", date: "2026-08-15", type: "National", allowedShrinkagePct: 15 },
+  { id: "h6", name: "Gandhi Jayanti", date: "2026-10-02", type: "National" },
+  { id: "h7", name: "Diwali", date: "2026-11-08", type: "Festival", allowedShrinkagePct: 20 },
+  { id: "h8", name: "Christmas", date: "2026-12-25", type: "National", allowedShrinkagePct: 15 },
+  { id: "h9", name: "Company Foundation Day", date: "2026-06-15", type: "Company" },
 ];
 
 // ─── Schedule ────────────────────────────────────────────────
