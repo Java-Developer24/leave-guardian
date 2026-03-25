@@ -369,9 +369,9 @@ export default function AgentLeave() {
                 </p>
               </div>
 
-              <div className="bg-card border border-border rounded-xl p-5">
+              <div className=" w-full bg-card border border-border rounded-xl p-5">
                 <h3 className="text-xs font-bold mb-3 font-heading">Legend & Day Status</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {[
                     { title: 'Quota used', desc: `${quotaUsed} of ${rules.agentMonthlyLeaveCap} planned leaves used for ${currentMonthLabel}`, tone: 'border-success/20 bg-success/8 text-success' },
                     { title: 'Pending request', desc: `${visiblePendingDates.length} planned day(s) are waiting on approval in ${currentMonthLabel}`, tone: 'border-info/20 bg-info/8 text-info' },
@@ -588,14 +588,7 @@ export default function AgentLeave() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-info/20 bg-info/10 px-4 py-3 text-xs text-info">
-            Guide view only shows your request summary. Coverage and manager-level checks continue automatically after submission.
-            {submissionPreview.some(preview => preview.needsManagerReview) && (
-              <div className="mt-2 font-semibold">
-                Some selected dates will also be routed for additional internal coverage review after you submit.
-              </div>
-            )}
-          </div>
+          
 
           <div className="flex justify-end gap-3">
             <button onClick={resetSubmissionFlow} className="px-5 py-2.5 rounded-xl border border-border text-sm font-semibold hover:bg-muted/30 transition-colors">
