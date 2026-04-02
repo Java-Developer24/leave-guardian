@@ -5,6 +5,12 @@ import { useAppStore } from '@/state/store';
 import SectionHeader from '@/components/SectionHeader';
 import Modal from '@/components/modals/Modal';
 import { formatDate } from '@/core/utils/dates';
+import {
+  getWeekoffModeLabel,
+  getWeekoffRequestDescription,
+  getWeekoffResultSummary,
+  getWeekoffScopeLabel,
+} from '@/core/utils/weekoff';
 import { showToast } from '@/components/toasts/ToastContainer';
 import {
   ArrowLeftRight,
@@ -100,9 +106,13 @@ export default function AdminWeekoffApprovals() {
                 <div key={request.id} className="p-5 space-y-4">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <div className="text-sm font-bold">{getUserName(request.sourceGuideId)} and {getUserName(request.peerGuideId)}</div>
+                      <div className="text-sm font-bold">
+                        {request.peerGuideId
+                          ? `${getUserName(request.sourceGuideId)} and ${getUserName(request.peerGuideId)}`
+                          : getUserName(request.sourceGuideId)}
+                      </div>
                       <div className="text-[11px] text-muted-foreground mt-1">
-                        Requested by {getUserName(request.requesterId)} for week starting {formatDate(request.weekStart)}
+                        Requested by {getUserName(request.requesterId)} • {getWeekoffModeLabel(request)} • {getWeekoffScopeLabel(request)}
                       </div>
                     </div>
                     <span className="rounded-full border border-warning/15 bg-warning/10 px-3 py-1 text-[10px] font-bold text-warning">
@@ -112,13 +122,17 @@ export default function AdminWeekoffApprovals() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                     <div className="rounded-xl border border-border bg-muted/20 p-3">
-                      <div className="text-muted-foreground">Guide A Week Off</div>
-                      <div className="mt-1 font-semibold">{getUserName(request.sourceGuideId)} • {formatDate(request.sourceDate)}</div>
+                      <div className="text-muted-foreground">{getUserName(request.sourceGuideId)}</div>
+                      <div className="mt-1 font-semibold">{formatDate(request.sourceDate)}</div>
                     </div>
                     <div className="rounded-xl border border-border bg-muted/20 p-3">
-                      <div className="text-muted-foreground">Guide B Week Off</div>
-                      <div className="mt-1 font-semibold">{getUserName(request.peerGuideId)} • {formatDate(request.peerDate)}</div>
+                      <div className="text-muted-foreground">{request.peerGuideId ? getUserName(request.peerGuideId) : 'Target Week Off'}</div>
+                      <div className="mt-1 font-semibold">{formatDate(request.peerDate)}</div>
                     </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border bg-background/80 px-4 py-3 text-xs text-muted-foreground">
+                    {getWeekoffRequestDescription(request, getUserName)}
                   </div>
 
                   {request.comment && (
@@ -162,7 +176,11 @@ export default function AdminWeekoffApprovals() {
             {reviewedRequests.slice(0, 6).map(request => (
               <div key={request.id} className="rounded-xl border border-border bg-background/80 px-4 py-3 text-xs">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="font-semibold">{getUserName(request.sourceGuideId)} to {getUserName(request.peerGuideId)}</div>
+                  <div className="font-semibold">
+                    {request.peerGuideId
+                      ? `${getUserName(request.sourceGuideId)} to ${getUserName(request.peerGuideId)}`
+                      : getUserName(request.sourceGuideId)}
+                  </div>
                   <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold border ${
                     request.status === 'Approved'
                       ? 'bg-success/10 text-success border-success/15'
@@ -172,7 +190,7 @@ export default function AdminWeekoffApprovals() {
                   </span>
                 </div>
                 <div className="mt-1 text-muted-foreground">
-                  {formatDate(request.sourceDate)} swapped with {formatDate(request.peerDate)}
+                  {getWeekoffResultSummary(request, getUserName)}
                 </div>
               </div>
             ))}

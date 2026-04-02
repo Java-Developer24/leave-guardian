@@ -4,6 +4,8 @@ export type LeaveStatus = 'Draft' | 'Submitted' | 'PendingPeer' | 'PendingSuperv
 export type HolidayType = 'National' | 'Festival' | 'Regional' | 'Company';
 export type ForecastAlertStatus = 'Open' | 'Reviewed';
 export type WeekoffSwapStatus = 'PendingAdmin' | 'Approved' | 'Rejected';
+export type WeekoffSwapMode = 'MonthSwap' | 'WeekMove' | 'WeekSwap';
+export type WeekoffPeriod = 'Month' | 'Week';
 
 export interface User {
   id: string;
@@ -81,10 +83,13 @@ export interface WeekoffSwapRequest {
   departmentId: string;
   requesterId: string;
   sourceGuideId: string;
-  peerGuideId: string;
+  peerGuideId?: string;
   sourceDate: string;
   peerDate: string;
   weekStart: string;
+  mode?: WeekoffSwapMode;
+  periodType?: WeekoffPeriod;
+  monthKey?: string;
   status: WeekoffSwapStatus;
   comment?: string;
   history: { at: string; by: string; action: string; note?: string }[];

@@ -42,6 +42,12 @@ class MockRepository implements IRepo {
   private rules: ShrinkageRules = { ...seedRules };
   private leaveWindow: LeaveWindow = { ...seedLeaveWindow };
 
+  constructor() {
+    this.weekoffSwapRequests
+      .filter(request => request.status === 'Approved')
+      .forEach(request => this.applyWeekoffSwapToSchedule(request));
+  }
+
   async getUsers() { await delay(); return [...this.users]; }
   async getUser(id: string) { await delay(); return this.users.find(u => u.id === id); }
   async getDepartments() { await delay(); return [...this.departments]; }
@@ -224,13 +230,44 @@ class MockRepository implements IRepo {
   }
 
   private applyWeekoffSwapToSchedule(request: WeekoffSwapRequest) {
+    const mode = request.mode ?? 'WeekSwap';
+
+    if (mode === 'MonthSwap') {
+      if (!request.peerGuideId || !request.monthKey) return;
+
+      const sourceMonthRows = this.schedule.filter(
+        row => row.userId === request.sourceGuideId && row.date.startsWith(request.monthKey!),
+      );
+      const peerMonthRows = this.schedule.filter(
+        row => row.userId === request.peerGuideId && row.date.startsWith(request.monthKey!),
+      );
+
+      sourceMonthRows.forEach(sourceRow => {
+        const peerRow = peerMonthRows.find(row => row.date === sourceRow.date);
+        if (!peerRow) return;
+        const sourceWeekOff = sourceRow.weekOff;
+        sourceRow.weekOff = peerRow.weekOff;
+        peerRow.weekOff = sourceWeekOff;
+      });
+      return;
+    }
+
     const sourceOwnDay = this.schedule.find(row => row.userId === request.sourceGuideId && row.date === request.sourceDate);
-    const sourcePeerDay = this.schedule.find(row => row.userId === request.sourceGuideId && row.date === request.peerDate);
+    const sourceTargetDay = this.schedule.find(row => row.userId === request.sourceGuideId && row.date === request.peerDate);
+
+    if (mode === 'WeekMove') {
+      if (sourceOwnDay) sourceOwnDay.weekOff = false;
+      if (sourceTargetDay) sourceTargetDay.weekOff = true;
+      return;
+    }
+
+    if (!request.peerGuideId) return;
+
     const peerOwnDay = this.schedule.find(row => row.userId === request.peerGuideId && row.date === request.peerDate);
     const peerSourceDay = this.schedule.find(row => row.userId === request.peerGuideId && row.date === request.sourceDate);
 
     if (sourceOwnDay) sourceOwnDay.weekOff = false;
-    if (sourcePeerDay) sourcePeerDay.weekOff = true;
+    if (sourceTargetDay) sourceTargetDay.weekOff = true;
     if (peerOwnDay) peerOwnDay.weekOff = false;
     if (peerSourceDay) peerSourceDay.weekOff = true;
   }

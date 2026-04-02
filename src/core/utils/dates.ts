@@ -27,8 +27,43 @@ export function formatDate(date: string | Date): string {
   return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+export function getMonthKey(date: string | Date): string {
+  const d = typeof date === 'string'
+    ? new Date(date.length === 7 ? `${date}-01T00:00:00` : date)
+    : date;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+export function formatMonthYear(date: string | Date): string {
+  const d = typeof date === 'string'
+    ? new Date(date.length === 7 ? `${date}-01T00:00:00` : date)
+    : date;
+  return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+
+export function formatMonthShort(date: string | Date): string {
+  const d = typeof date === 'string'
+    ? new Date(date.length === 7 ? `${date}-01T00:00:00` : date)
+    : date;
+  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+}
+
 export function toDateStr(d: Date): string {
   return d.toISOString().slice(0, 10);
+}
+
+export function formatTimeAsIST(time: string, includeZone = true): string {
+  const [hourRaw, minuteRaw] = time.split(':');
+  const hours = Number(hourRaw);
+  const minutes = Number(minuteRaw);
+  const suffix = hours >= 12 ? 'PM' : 'AM';
+  const displayHour = hours % 12 === 0 ? 12 : hours % 12;
+  const label = `${displayHour}:${String(minutes).padStart(2, '0')} ${suffix}`;
+  return includeZone ? `${label} IST` : label;
+}
+
+export function formatShiftRangeIST(shiftStart: string, shiftEnd: string): string {
+  return `${formatTimeAsIST(shiftStart, false)} - ${formatTimeAsIST(shiftEnd)}`;
 }
 
 function parseDateTime(value: string) {

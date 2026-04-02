@@ -26,7 +26,7 @@ const navSections: Record<string, { label: string; items: { to: string; label: s
     { label: 'Management', items: [
       { to: '/supervisor/approvals', label: 'Approvals', icon: CheckSquare },
       { to: '/supervisor/team', label: 'Team Overview', icon: Users },
-      { to: '/supervisor/schedule', label: 'Week Schedule', icon: Calendar },
+      { to: '/supervisor/schedule', label: 'Team Schedule', icon: Calendar },
     ]},
     { label: 'Insights', items: [
       { to: '/supervisor/analytics', label: 'Analytics', icon: BarChart3 },

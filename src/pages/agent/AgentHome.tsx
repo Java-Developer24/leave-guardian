@@ -138,6 +138,7 @@ export default function AgentHome() {
   );
 
   const selectedAction = incomingSwapActions.find(leave => leave.id === selectedActionId) ?? null;
+  const isSameDayIncomingSwap = Boolean(selectedAction && selectedAction.peerLeaveDate && selectedAction.date === selectedAction.peerLeaveDate);
   const quickActionClass = 'w-full rounded-xl border border-border/40 bg-card/80 px-4 py-3 text-foreground font-semibold flex items-center gap-2.5 text-xs justify-center transition-all hover:bg-primary/8 hover:border-primary/35 hover:text-primary';
 
   const recentActivity = useMemo(() => {
@@ -170,6 +171,11 @@ export default function AgentHome() {
 
   const handleApproveIncomingSwap = async () => {
     if (!selectedAction || !currentUser) return;
+
+    if (selectedAction.peerLeaveDate && selectedAction.date === selectedAction.peerLeaveDate) {
+      showToast('Same-day swaps are not allowed', 'error');
+      return;
+    }
 
     const updatedHistory = [
       ...(selectedAction.history ?? []),
@@ -431,6 +437,12 @@ export default function AgentHome() {
               </div>
             )}
 
+            {isSameDayIncomingSwap && (
+              <div className="rounded-xl border border-destructive/15 bg-destructive/5 px-4 py-3 text-xs font-semibold text-destructive">
+                Same-day swaps cannot be approved. Ask the requester to select a different leave date.
+              </div>
+            )}
+
             <div>
               <label className="block text-[10px] tracking-section uppercase text-muted-foreground mb-1.5 font-semibold">Comment</label>
               <textarea
@@ -447,7 +459,7 @@ export default function AgentHome() {
               <button onClick={() => { setSelectedActionId(null); setApprovalComment(''); }} className="px-5 py-2.5 rounded-xl border border-border text-sm font-semibold hover:bg-muted/30 transition-colors">
                 Close
               </button>
-              <button onClick={() => setConfirmApproveOpen(true)} className="px-5 py-2.5 rounded-xl btn-primary-gradient text-primary-foreground text-sm font-bold flex items-center gap-2">
+              <button onClick={() => setConfirmApproveOpen(true)} disabled={isSameDayIncomingSwap} className="px-5 py-2.5 rounded-xl btn-primary-gradient text-primary-foreground text-sm font-bold flex items-center gap-2 disabled:opacity-40">
                 <Check size={14} /> Approve
               </button>
             </div>
@@ -472,7 +484,7 @@ export default function AgentHome() {
             <button onClick={() => setConfirmApproveOpen(false)} className="px-5 py-2.5 rounded-xl border border-border text-sm font-semibold hover:bg-muted/30 transition-colors">
               Cancel
             </button>
-            <button onClick={handleApproveIncomingSwap} className="px-5 py-2.5 rounded-xl btn-primary-gradient text-primary-foreground text-sm font-bold">
+            <button onClick={handleApproveIncomingSwap} disabled={isSameDayIncomingSwap} className="px-5 py-2.5 rounded-xl btn-primary-gradient text-primary-foreground text-sm font-bold disabled:opacity-40">
               Confirm Approval
             </button>
           </div>

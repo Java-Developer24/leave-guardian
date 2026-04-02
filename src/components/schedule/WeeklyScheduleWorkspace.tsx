@@ -4,7 +4,14 @@ import { pageTransition } from '@/styles/motion';
 import { useAppStore } from '@/state/store';
 import SectionHeader from '@/components/SectionHeader';
 import Modal from '@/components/modals/Modal';
-import { formatDate, toDateStr } from '@/core/utils/dates';
+import { formatDate, formatMonthYear, formatShiftRangeIST, getMonthKey, toDateStr } from '@/core/utils/dates';
+import {
+  getWeekoffAppliedTag,
+  getWeekoffModeLabel,
+  getWeekoffRequestDescription,
+  getWeekoffResultSummary,
+  getWeekoffScopeLabel,
+} from '@/core/utils/weekoff';
 import { showToast } from '@/components/toasts/ToastContainer';
 import { ArrowLeftRight, Building2, Filter, Send, Users } from 'lucide-react';
 
@@ -45,10 +52,10 @@ function formatWeekRange(weekStart: Date) {
 
 const headerCopy: Record<SchedulePersona, { tag: string; title: string; highlight: string; description: string }> = {
   supervisor: {
-    tag: 'Supervisor Schedule',
+    tag: 'Team Schedule',
     title: 'Team Week',
     highlight: 'Planner',
-    description: 'Review current and next month schedules, track weekly leave coverage, and request week-off swaps for your reporting guides.',
+    description: 'Review current and next month schedules, track leave coverage, and manage week-off planning for your reporting guides.',
   },
   manager: {
     tag: 'Manager Schedule',
@@ -63,6 +70,46 @@ const headerCopy: Record<SchedulePersona, { tag: string; title: string; highligh
     description: 'Review weekly guide schedules across departments and teams with the same planning view used by supervisors.',
   },
 };
+
+const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function getWeekdayName(date: string) {
+  return WEEKDAY_NAMES[new Date(`${date}T00:00:00`).getDay()];
+}
+
+function formatWeekdayWithDate(date: string) {
+  return `${getWeekdayName(date)} • ${formatDate(date)}`;
+}
+
+function getRecurringWeekoffPattern(dates: string[]) {
+  if (dates.length === 0) return null;
+
+  const grouped = dates.reduce<Record<number, { count: number; sampleDate: string }>>((acc, date) => {
+    const weekday = new Date(`${date}T00:00:00`).getDay();
+    const current = acc[weekday];
+    acc[weekday] = {
+      count: (current?.count ?? 0) + 1,
+      sampleDate: current?.sampleDate ?? date,
+    };
+    return acc;
+  }, {});
+
+  const best = Object.entries(grouped)
+    .map(([weekday, value]) => ({ weekday: Number(weekday), ...value }))
+    .sort((a, b) => b.count - a.count || a.weekday - b.weekday)[0];
+
+  return best ? {
+    weekday: best.weekday,
+    label: WEEKDAY_NAMES[best.weekday],
+    sampleDate: best.sampleDate,
+    count: best.count,
+  } : null;
+}
+
+function formatRecurringWeekoff(pattern: ReturnType<typeof getRecurringWeekoffPattern>) {
+  if (!pattern) return 'No repeating week off found';
+  return `${pattern.label} • regular repeating week off`;
+}
 
 export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePersona }) {
   const {
@@ -93,6 +140,11 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
   const [peerDate, setPeerDate] = useState('');
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [swapScope, setSwapScope] = useState<'Month' | 'Week'>('Week');
+  const [swapMode, setSwapMode] = useState<'MonthSwap' | 'WeekMove' | 'WeekSwap'>('WeekSwap');
+  const [historyYear, setHistoryYear] = useState(today.getFullYear());
+  const [historyMonth, setHistoryMonth] = useState(today.getMonth());
+  const [historyGuideId, setHistoryGuideId] = useState('');
 
   useEffect(() => {
     if (mode === 'supervisor') {
@@ -107,6 +159,7 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
   }, [mode, currentUser, departments, defaultDepartmentId, selectedDepartmentId]);
 
   const visibleMonth = monthPresets.find(item => item.id === monthView)?.value ?? monthPresets[0].value;
+  const visibleMonthKey = getMonthKey(visibleMonth);
   const weekOptions = useMemo(() => getWeeksForMonth(visibleMonth), [visibleMonth]);
 
   useEffect(() => {
@@ -115,6 +168,21 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
       : weekOptions[0] ?? startOfWeek(visibleMonth);
     setSelectedWeekStart(toDateStr(preferredWeek));
   }, [monthView, today, visibleMonth, weekOptions]);
+
+  useEffect(() => {
+    setHistoryYear(visibleMonth.getFullYear());
+    setHistoryMonth(visibleMonth.getMonth());
+  }, [visibleMonth]);
+
+  useEffect(() => {
+    if (swapScope === 'Month') {
+      setSwapMode('MonthSwap');
+      return;
+    }
+    if (swapMode === 'MonthSwap') {
+      setSwapMode('WeekSwap');
+    }
+  }, [swapScope, swapMode]);
 
   const activeWeekStartDate = useMemo(() => new Date(`${selectedWeekStart}T00:00:00`), [selectedWeekStart]);
   const weekDays = useMemo(
@@ -216,6 +284,12 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [users, filteredAgentIdSet]);
 
+  useEffect(() => {
+    if (activeGuideId) {
+      setHistoryGuideId(activeGuideId);
+    }
+  }, [activeGuideId]);
+
   const visibleSupervisors = useMemo(() => {
     if (mode === 'supervisor') {
       return users.filter(user => user.id === currentUser?.id);
@@ -259,15 +333,113 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
 
   const scopedWeekoffRequests = useMemo(() => {
     return weekoffSwapRequests
-      .filter(request => filteredAgentIdSet.has(request.sourceGuideId) || filteredAgentIdSet.has(request.peerGuideId))
+      .filter(request => {
+        if (mode === 'supervisor') {
+          return request.departmentId === scopeDepartmentId;
+        }
+        return filteredAgentIdSet.has(request.sourceGuideId) || filteredAgentIdSet.has(request.peerGuideId);
+      })
       .sort((a, b) => (b.history[0]?.at ?? '').localeCompare(a.history[0]?.at ?? ''));
-  }, [weekoffSwapRequests, filteredAgentIdSet]);
+  }, [weekoffSwapRequests, filteredAgentIdSet, mode, scopeDepartmentId]);
 
   const selectedGuideRow = mode === 'supervisor'
     ? weekRows.find(row => row.agent.id === activeGuideId) ?? null
     : null;
   const peerGuideChoices = visibleAgents.filter(agent => agent.id !== activeGuideId);
   const peerGuideRow = weekRows.find(row => row.agent.id === peerGuideId) ?? null;
+  const approvedWeekoffRequests = useMemo(
+    () => scopedWeekoffRequests.filter(request => request.status === 'Approved'),
+    [scopedWeekoffRequests],
+  );
+  const selectedGuideMonthRows = useMemo(() => {
+    if (!activeGuideId) return [];
+    return schedule
+      .filter(row => row.userId === activeGuideId && row.date.startsWith(visibleMonthKey))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [schedule, activeGuideId, visibleMonthKey]);
+  const peerGuideMonthRows = useMemo(() => {
+    if (!peerGuideId) return [];
+    return schedule
+      .filter(row => row.userId === peerGuideId && row.date.startsWith(visibleMonthKey))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [schedule, peerGuideId, visibleMonthKey]);
+  const selectedGuideMonthOffDates = useMemo(
+    () => selectedGuideMonthRows.filter(row => row.weekOff).map(row => row.date),
+    [selectedGuideMonthRows],
+  );
+  const peerGuideMonthOffDates = useMemo(
+    () => peerGuideMonthRows.filter(row => row.weekOff).map(row => row.date),
+    [peerGuideMonthRows],
+  );
+  const selectedGuideWeekMoveTargets = useMemo(
+    () => (selectedGuideRow?.dayRows ?? [])
+      .filter(Boolean)
+      .filter(row => !row?.weekOff)
+      .map(row => row!.date),
+    [selectedGuideRow],
+  );
+  const selectedGuideRecurringWeekoff = useMemo(
+    () => getRecurringWeekoffPattern(selectedGuideMonthOffDates),
+    [selectedGuideMonthOffDates],
+  );
+  const peerGuideRecurringWeekoff = useMemo(
+    () => getRecurringWeekoffPattern(peerGuideMonthOffDates),
+    [peerGuideMonthOffDates],
+  );
+  const historyMonthKey = `${historyYear}-${String(historyMonth + 1).padStart(2, '0')}`;
+  const historyYearOptions = useMemo(() => Array.from(new Set(
+    [...schedule.map(row => row.date.slice(0, 4)), ...weekoffSwapRequests.map(request => request.sourceDate.slice(0, 4))]
+      .map(Number),
+  )).sort((a, b) => a - b), [schedule, weekoffSwapRequests]);
+  const guideHistoryRows = useMemo(() => {
+    return approvedWeekoffRequests
+      .filter(request =>
+        (request.monthKey ?? request.sourceDate.slice(0, 7)) === historyMonthKey &&
+        (!historyGuideId || request.sourceGuideId === historyGuideId || request.peerGuideId === historyGuideId),
+      )
+      .sort((a, b) => (b.history[b.history.length - 1]?.at ?? '').localeCompare(a.history[a.history.length - 1]?.at ?? ''));
+  }, [approvedWeekoffRequests, historyMonthKey, historyGuideId]);
+  const pendingWeekoffQueue = useMemo(
+    () => scopedWeekoffRequests.filter(request => request.status === 'PendingAdmin'),
+    [scopedWeekoffRequests],
+  );
+  const historyFallbackRows = useMemo(() => {
+    if (guideHistoryRows.length > 0 || historyGuideId) return [];
+    return [...approvedWeekoffRequests]
+      .sort((a, b) => (b.history[b.history.length - 1]?.at ?? '').localeCompare(a.history[a.history.length - 1]?.at ?? ''))
+      .slice(0, 4);
+  }, [guideHistoryRows, historyGuideId, approvedWeekoffRequests]);
+  const visibleHistoryRows = guideHistoryRows.length > 0 ? guideHistoryRows : historyFallbackRows;
+
+  useEffect(() => {
+    if (!selectedGuideRow && selectedGuideMonthOffDates.length === 0) return;
+
+    if (swapScope === 'Month') {
+      setSourceDate(selectedGuideRecurringWeekoff?.sampleDate ?? selectedGuideMonthOffDates[0] ?? '');
+      return;
+    }
+
+    if (swapMode === 'WeekMove') {
+      const preferredSource = selectedGuideRow?.weekOffDates[0] ?? '';
+      const preferredTarget = selectedGuideWeekMoveTargets.find(date => date !== preferredSource) ?? selectedGuideWeekMoveTargets[0] ?? '';
+      setSourceDate(preferredSource);
+      setPeerDate(preferredTarget);
+      return;
+    }
+
+    setSourceDate(selectedGuideRow?.weekOffDates[0] ?? '');
+  }, [selectedGuideRecurringWeekoff, selectedGuideRow, selectedGuideMonthOffDates, selectedGuideWeekMoveTargets, swapMode, swapScope]);
+
+  useEffect(() => {
+    if (swapScope === 'Month') {
+      setPeerDate(peerGuideRecurringWeekoff?.sampleDate ?? peerGuideMonthOffDates[0] ?? '');
+      return;
+    }
+
+    if (swapMode === 'WeekSwap') {
+      setPeerDate(peerGuideRow?.weekOffDates[0] ?? '');
+    }
+  }, [peerGuideMonthOffDates, peerGuideRecurringWeekoff, peerGuideRow, swapMode, swapScope]);
 
   const scopeDepartmentName = scopeDepartmentId === 'all'
     ? 'All Departments'
@@ -279,13 +451,18 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
   const weekOffCount = weekRows.reduce((count, row) => count + row.weekOffDates.length, 0);
 
   const handleSubmitSwap = async () => {
-    if (!currentUser || !activeGuideId || !peerGuideId || !sourceDate || !peerDate || scopeDepartmentId === 'all') {
-      showToast('Select both guides and both week-off dates first', 'error');
+    if (!currentUser || !activeGuideId || !sourceDate || !peerDate || scopeDepartmentId === 'all') {
+      showToast('Select the guide and week-off dates first', 'error');
+      return;
+    }
+
+    if ((swapScope === 'Month' || swapMode === 'WeekSwap') && !peerGuideId) {
+      showToast('Select the paired guide first', 'error');
       return;
     }
 
     if (sourceDate === peerDate) {
-      showToast('Choose different dates for the week-off swap', 'error');
+      showToast('Choose different dates for the week-off change', 'error');
       return;
     }
 
@@ -295,10 +472,13 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
         requesterId: currentUser.id,
         departmentId: scopeDepartmentId,
         sourceGuideId: activeGuideId,
-        peerGuideId,
+        peerGuideId: swapMode === 'WeekMove' ? undefined : peerGuideId,
         sourceDate,
         peerDate,
         weekStart: selectedWeekStart,
+        mode: swapScope === 'Month' ? 'MonthSwap' : swapMode,
+        periodType: swapScope,
+        monthKey: visibleMonthKey,
         comment: comment.trim() || undefined,
       });
       await refreshWeekoffSwapRequests();
@@ -308,6 +488,8 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
       setSourceDate('');
       setPeerDate('');
       setComment('');
+      setSwapScope('Week');
+      setSwapMode('WeekSwap');
     } catch {
       showToast('Failed to submit week-off swap request', 'error');
     } finally {
@@ -326,8 +508,8 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
         description={copy.description}
       />
 
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.72fr)_320px] gap-5 mb-6">
-        <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+      {mode === 'supervisor' ? (
+        <div className="mb-6 rounded-xl border border-border bg-card p-5 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex gap-2">
               {monthPresets.map(option => (
@@ -352,7 +534,52 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
             </div>
           </div>
 
-          {mode !== 'supervisor' && (
+          <div className="flex flex-wrap gap-2">
+            {weekOptions.map(weekStart => {
+              const key = toDateStr(weekStart);
+              return (
+                <button
+                  key={key}
+                  onClick={() => setSelectedWeekStart(key)}
+                  className={`rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
+                    selectedWeekStart === key
+                      ? 'bg-info/12 text-info border border-info/20'
+                      : 'bg-background border border-border hover:bg-muted/30'
+                  }`}
+                >
+                  {formatWeekRange(weekStart)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.72fr)_320px] gap-5 mb-6">
+          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex gap-2">
+                {monthPresets.map(option => (
+                  <button
+                    key={option.id}
+                    onClick={() => setMonthView(option.id as 'current' | 'next')}
+                    className={`rounded-xl px-4 py-2 text-xs font-bold transition-colors ${
+                      monthView === option.id
+                        ? 'bg-primary text-primary-foreground'
+                        : 'border border-border bg-background hover:bg-muted/30'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <div className="rounded-xl border border-border bg-muted/20 px-4 py-2 text-right">
+                <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60 font-heading">Active Month</div>
+                <div className="text-sm font-semibold">
+                  {visibleMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-3 items-end">
               <div>
                 <label className="block text-[10px] tracking-section uppercase text-muted-foreground mb-1.5 font-semibold">Department</label>
@@ -390,89 +617,59 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
                 Team filter uses supervisor reporting groups.
               </div>
             </div>
-          )}
 
-          <div className="flex flex-wrap gap-2">
-            {weekOptions.map(weekStart => {
-              const key = toDateStr(weekStart);
-              return (
-                <button
-                  key={key}
-                  onClick={() => setSelectedWeekStart(key)}
-                  className={`rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
-                    selectedWeekStart === key
-                      ? 'bg-info/12 text-info border border-info/20'
-                      : 'bg-background border border-border hover:bg-muted/30'
-                  }`}
-                >
-                  {formatWeekRange(weekStart)}
-                </button>
-              );
-            })}
+            <div className="flex flex-wrap gap-2">
+              {weekOptions.map(weekStart => {
+                const key = toDateStr(weekStart);
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setSelectedWeekStart(key)}
+                    className={`rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
+                      selectedWeekStart === key
+                        ? 'bg-info/12 text-info border border-info/20'
+                        : 'bg-background border border-border hover:bg-muted/30'
+                    }`}
+                  >
+                    {formatWeekRange(weekStart)}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
 
-        <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl border flex items-center justify-center ${
-              mode === 'supervisor'
-                ? 'bg-primary/10 border-primary/15'
-                : 'bg-info/10 border-info/15'
-            }`}>
-              {mode === 'supervisor' ? (
-                <ArrowLeftRight size={16} className="text-primary" />
-              ) : (
+          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl border flex items-center justify-center bg-info/10 border-info/15">
                 <Users size={16} className="text-info" />
-              )}
-            </div>
-            <div>
-              <div className="text-sm font-bold">
-                {mode === 'supervisor' ? 'Week-Off Swap Queue' : 'Schedule Scope'}
               </div>
-              <div className="text-[11px] text-muted-foreground">
-                {mode === 'supervisor'
-                  ? 'Supervisor requests waiting on admin approval.'
-                  : 'Review the active department and team schedule scope.'}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="rounded-xl border border-border bg-muted/20 p-3">
-              <div className="text-muted-foreground">
-                {mode === 'supervisor' ? 'Pending Admin' : 'Guides Visible'}
-              </div>
-              <div className="mt-1 text-lg font-black font-heading">
-                {mode === 'supervisor'
-                  ? scopedWeekoffRequests.filter(request => request.status === 'PendingAdmin').length
-                  : visibleAgents.length}
-              </div>
-            </div>
-            <div className="rounded-xl border border-border bg-muted/20 p-3">
-              <div className="text-muted-foreground">
-                {mode === 'supervisor' ? 'Approved' : 'Leaves This Week'}
-              </div>
-              <div className="mt-1 text-lg font-black font-heading">
-                {mode === 'supervisor'
-                  ? scopedWeekoffRequests.filter(request => request.status === 'Approved').length
-                  : weekLeaveCount}
-              </div>
-            </div>
-            {mode !== 'supervisor' && (
-              <>
-                <div className="rounded-xl border border-border bg-muted/20 p-3">
-                  <div className="text-muted-foreground">Week Off Slots</div>
-                  <div className="mt-1 text-lg font-black font-heading">{weekOffCount}</div>
+              <div>
+                <div className="text-sm font-bold">Schedule Scope</div>
+                <div className="text-[11px] text-muted-foreground">
+                  Review the active department and team schedule scope.
                 </div>
-                <div className="rounded-xl border border-border bg-muted/20 p-3">
-                  <div className="text-muted-foreground">Teams In Scope</div>
-                  <div className="mt-1 text-lg font-black font-heading">{visibleSupervisors.length}</div>
-                </div>
-              </>
-            )}
-          </div>
+              </div>
+            </div>
 
-          {mode !== 'supervisor' && (
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="rounded-xl border border-border bg-muted/20 p-3">
+                <div className="text-muted-foreground">Guides Visible</div>
+                <div className="mt-1 text-lg font-black font-heading">{visibleAgents.length}</div>
+              </div>
+              <div className="rounded-xl border border-border bg-muted/20 p-3">
+                <div className="text-muted-foreground">Leaves This Week</div>
+                <div className="mt-1 text-lg font-black font-heading">{weekLeaveCount}</div>
+              </div>
+              <div className="rounded-xl border border-border bg-muted/20 p-3">
+                <div className="text-muted-foreground">Week Off Slots</div>
+                <div className="mt-1 text-lg font-black font-heading">{weekOffCount}</div>
+              </div>
+              <div className="rounded-xl border border-border bg-muted/20 p-3">
+                <div className="text-muted-foreground">Teams In Scope</div>
+                <div className="mt-1 text-lg font-black font-heading">{visibleSupervisors.length}</div>
+              </div>
+            </div>
+
             <div className="rounded-xl border border-border bg-background/80 px-4 py-3">
               <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60 font-heading">
                 <Building2 size={12} className="text-primary" /> Current Scope
@@ -482,38 +679,9 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
                 {selectedTeamId === 'all' ? 'All teams in this department scope' : `${scopeTeamName} reporting group`}
               </div>
             </div>
-          )}
-
-          <div className="space-y-3">
-            {scopedWeekoffRequests.slice(0, 3).map(request => (
-              <div key={request.id} className="rounded-xl border border-border bg-background/80 px-4 py-3 text-xs">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="font-semibold">
-                    {getUserName(request.sourceGuideId)} to {getUserName(request.peerGuideId)}
-                  </div>
-                  <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold border ${
-                    request.status === 'Approved'
-                      ? 'bg-success/10 text-success border-success/15'
-                      : request.status === 'Rejected'
-                        ? 'bg-destructive/10 text-destructive border-destructive/15'
-                        : 'bg-warning/10 text-warning border-warning/15'
-                  }`}>
-                    {request.status}
-                  </span>
-                </div>
-                <div className="mt-1 text-muted-foreground">
-                  {formatDate(request.sourceDate)} swapped with {formatDate(request.peerDate)}
-                </div>
-              </div>
-            ))}
-            {scopedWeekoffRequests.length === 0 && (
-              <div className="rounded-xl border border-border bg-background/80 px-4 py-6 text-xs text-center text-muted-foreground">
-                {mode === 'supervisor' ? 'No week-off swaps yet.' : 'No week-off swap activity in this scope yet.'}
-              </div>
-            )}
           </div>
         </div>
-      </div>
+      )}
 
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         <div className="px-5 py-4 border-b border-border flex items-center justify-between gap-3">
@@ -533,15 +701,15 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
             No guide schedules found for the current filters.
           </div>
         ) : (
-          <div className="overflow-hidden">
-            <table className="w-full table-fixed premium-table [&_th]:p-4 [&_th]:text-[11px] [&_td]:p-4">
+          <div className="overflow-x-auto">
+            <table className="min-w-[1360px] w-full table-auto premium-table [&_th]:whitespace-nowrap [&_th]:p-4 [&_th]:text-[11px] [&_td]:align-top [&_td]:whitespace-normal [&_td]:p-4">
               <colgroup>
-                <col className={mode === 'supervisor' ? 'w-[18%]' : 'w-[22%]'} />
+                <col className={mode === 'supervisor' ? 'w-[220px]' : 'w-[240px]'} />
                 {weekDays.map(day => (
-                  <col key={toDateStr(day)} className="w-[8%]" />
+                  <col key={toDateStr(day)} className="w-[140px]" />
                 ))}
-                <col className={mode === 'supervisor' ? 'w-[18%]' : 'w-[22%]'} />
-                {mode === 'supervisor' && <col className="w-[8%]" />}
+                <col className={mode === 'supervisor' ? 'w-[260px]' : 'w-[280px]'} />
+                {mode === 'supervisor' && <col className="w-[160px]" />}
               </colgroup>
               <thead>
                 <tr>
@@ -552,7 +720,7 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
                     </th>
                   ))}
                   <th>Leaves Applied</th>
-                  {mode === 'supervisor' && <th>Swap Week Off</th>}
+                  {mode === 'supervisor' && <th>Manage Week Off</th>}
                 </tr>
               </thead>
               <tbody>
@@ -576,25 +744,61 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
                           </div>
                         </div>
                       </td>
-                      {row.dayRows.map((dayRow, index) => (
-                        <td key={`${row.agent.id}-${weekDays[index] ? toDateStr(weekDays[index]) : index}`} className="align-top">
-                          {!dayRow ? (
-                            <span className="text-[11px] text-muted-foreground/50">NA</span>
-                          ) : dayRow.weekOff ? (
-                            <span className="inline-flex rounded-full border border-warning/15 bg-warning/10 px-2.5 py-1 text-[10px] font-bold text-warning">
-                              WO
-                            </span>
-                          ) : (
-                            <div className="text-[11px] leading-tight">
-                              <div className="font-semibold">
-                                {dayRow.shiftStart.slice(0, 2)}-{dayRow.shiftEnd.slice(0, 2)}
+                      {row.dayRows.map((dayRow, index) => {
+                        const cellDate = weekDays[index] ? toDateStr(weekDays[index]) : '';
+                        const dayLeave = row.weekLeaves.find(leave => leave.date === cellDate) ?? null;
+                        const weekoffTag = approvedWeekoffRequests
+                          .map(request => getWeekoffAppliedTag(request, row.agent.id, cellDate))
+                          .find(Boolean);
+
+                        return (
+                          <td key={`${row.agent.id}-${cellDate || index}`} className="align-top whitespace-normal">
+                            {!dayRow ? (
+                              <span className="text-[11px] text-muted-foreground/50">NA</span>
+                            ) : dayLeave ? (
+                              <div className="rounded-xl border border-info/20 bg-info/10 px-2.5 py-2 text-[10px]">
+                                <div className="font-bold text-info">{dayLeave.type} Leave</div>
+                                <div className="mt-1 text-info/80">{dayLeave.status}</div>
                               </div>
-                              <div className="text-muted-foreground">WK</div>
-                            </div>
-                          )}
-                        </td>
-                      ))}
-                      <td className="align-top">
+                            ) : dayRow.weekOff ? (
+                              <div className={`rounded-xl border px-2.5 py-2 text-[10px] ${
+                                weekoffTag === 'monthSwap'
+                                  ? 'border-primary/20 bg-primary/10 text-primary'
+                                  : weekoffTag === 'weekMove'
+                                    ? 'border-info/20 bg-info/10 text-info'
+                                    : weekoffTag === 'weekSwap'
+                                      ? 'border-accent/20 bg-accent/10 text-accent'
+                                      : 'border-warning/15 bg-warning/10 text-warning'
+                              }`}>
+                                <div className="font-bold">
+                                  {weekoffTag === 'monthSwap'
+                                    ? 'WO Swap'
+                                    : weekoffTag === 'weekMove'
+                                      ? 'WO Move'
+                                      : weekoffTag === 'weekSwap'
+                                        ? 'WO Swap'
+                                        : 'Week Off'}
+                                </div>
+                                <div className="mt-1 opacity-80">
+                                  {weekoffTag === 'monthSwap'
+                                    ? 'Month swap'
+                                    : weekoffTag === 'weekMove'
+                                      ? 'Moved off'
+                                      : weekoffTag === 'weekSwap'
+                                        ? 'Swapped off'
+                                        : 'Regular'}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="rounded-xl border border-border/50 bg-background/70 px-2.5 py-2 text-[10px] leading-tight">
+                                <div className="font-semibold">{formatShiftRangeIST(dayRow.shiftStart, dayRow.shiftEnd)}</div>
+                                <div className="mt-1 text-muted-foreground">Working day</div>
+                              </div>
+                            )}
+                          </td>
+                        );
+                      })}
+                      <td className="align-top whitespace-normal">
                         <div className="flex flex-wrap gap-1">
                           {row.weekLeaves.length === 0 ? (
                             <span className="text-[11px] text-muted-foreground/60">No leave</span>
@@ -611,7 +815,7 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
                         </div>
                       </td>
                       {mode === 'supervisor' && (
-                        <td className="align-top">
+                        <td className="align-top whitespace-normal">
                           <button
                             onClick={() => {
                               setActiveGuideId(row.agent.id);
@@ -619,11 +823,13 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
                               setSourceDate(row.weekOffDates[0] ?? '');
                               setPeerDate('');
                               setComment('');
+                              setSwapScope('Week');
+                              setSwapMode('WeekSwap');
                             }}
                             disabled={row.weekOffDates.length === 0}
                             className="inline-flex rounded-xl border border-border px-3 py-1.5 text-[11px] font-semibold hover:bg-muted/30 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                           >
-                            Swap Week Off
+                            Manage
                           </button>
                         </td>
                       )}
@@ -637,86 +843,516 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
       </div>
 
       {mode === 'supervisor' && (
-        <Modal open={!!selectedGuideRow} onClose={() => setActiveGuideId(null)} title="Request Week-Off Swap">
+        <div className="mt-6 rounded-xl border border-border bg-card overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
+            <div>
+              <div className="text-sm font-bold font-heading">Week-Off Change History</div>
+              <div className="text-[11px] text-muted-foreground">
+                Review month swaps, week moves, and week swaps for each guide across different months.
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+              <select value={historyGuideId} onChange={event => setHistoryGuideId(event.target.value)} className="glass-input text-sm">
+                <option value="">All guides</option>
+                {visibleAgents.map(agent => (
+                  <option key={`history-guide-${agent.id}`} value={agent.id}>{agent.name}</option>
+                ))}
+              </select>
+              <select value={historyMonth} onChange={event => setHistoryMonth(Number(event.target.value))} className="glass-input text-sm">
+                {Array.from({ length: 12 }, (_, monthIndex) => (
+                  <option key={`history-month-${monthIndex}`} value={monthIndex}>
+                    {new Date(2026, monthIndex, 1).toLocaleDateString('en-US', { month: 'long' })}
+                  </option>
+                ))}
+              </select>
+              <select value={historyYear} onChange={event => setHistoryYear(Number(event.target.value))} className="glass-input text-sm">
+                {historyYearOptions.map(year => (
+                  <option key={`history-year-${year}`} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {visibleHistoryRows.length === 0 ? (
+            <div className="px-5 py-10 text-center text-sm text-muted-foreground">
+              No approved week-off changes found for this month and guide selection.
+            </div>
+          ) : (
+            <div className="space-y-4 px-5 py-5">
+              {historyFallbackRows.length > 0 ? (
+                <div className="rounded-xl border border-info/20 bg-info/10 px-4 py-3 text-xs text-info">
+                  No approved records were found for the exact month filter, so the latest approved week-off examples are shown below.
+                </div>
+              ) : null}
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+                <div className="rounded-xl border border-border bg-muted/20 p-3 text-xs">
+                  <div className="text-muted-foreground">Visible History Records</div>
+                  <div className="mt-1 text-lg font-black font-heading">{visibleHistoryRows.length}</div>
+                </div>
+                <div className="rounded-xl border border-border bg-muted/20 p-3 text-xs">
+                  <div className="text-muted-foreground">Selected Month</div>
+                  <div className="mt-1 text-sm font-semibold">{formatMonthYear(historyMonthKey)}</div>
+                </div>
+                <div className="rounded-xl border border-border bg-muted/20 p-3 text-xs">
+                  <div className="text-muted-foreground">Guide Filter</div>
+                  <div className="mt-1 text-sm font-semibold">{historyGuideId ? getUserName(historyGuideId) : 'All guides'}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+              {visibleHistoryRows.map(request => (
+                <div key={`history-row-${request.id}`} className="rounded-2xl border border-border bg-gradient-to-br from-muted/30 to-background p-4 shadow-sm">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60 font-heading">Guide Pair</div>
+                      <div className="mt-1 text-sm font-bold">{getUserName(request.sourceGuideId)}</div>
+                      <div className="mt-1 text-[11px] text-muted-foreground">
+                        {request.peerGuideId ? `Matched with ${getUserName(request.peerGuideId)}` : 'Single-guide week-off movement'}
+                      </div>
+                    </div>
+                    <span className="rounded-full border border-success/20 bg-success/10 px-3 py-1 text-[10px] font-bold text-success">
+                      Approved
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-xs lg:grid-cols-4">
+                    <div className="rounded-xl border border-border bg-background/80 p-3">
+                      <div className="text-muted-foreground">Change Type</div>
+                      <div className="mt-1 font-semibold">{getWeekoffModeLabel(request)}</div>
+                    </div>
+                    <div className="rounded-xl border border-border bg-background/80 p-3">
+                      <div className="text-muted-foreground">Scope</div>
+                      <div className="mt-1 font-semibold">{getWeekoffScopeLabel(request)}</div>
+                    </div>
+                    <div className="rounded-xl border border-border bg-background/80 p-3">
+                      <div className="text-muted-foreground">Requested On</div>
+                      <div className="mt-1 font-semibold">{formatDate(request.history[0]?.at ?? request.sourceDate)}</div>
+                    </div>
+                    <div className="rounded-xl border border-border bg-background/80 p-3">
+                      <div className="text-muted-foreground">Approved On</div>
+                      <div className="mt-1 font-semibold">{formatDate(request.history[request.history.length - 1]?.at ?? request.sourceDate)}</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+                    <div className="rounded-xl border border-border bg-background/80 p-3 text-xs">
+                      <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60 font-heading">Approved Result</div>
+                      <div className="mt-2 font-semibold">{getWeekoffResultSummary(request, getUserName)}</div>
+                      {request.comment ? (
+                        <div className="mt-2 text-muted-foreground">Comment: {request.comment}</div>
+                      ) : null}
+                    </div>
+                    <div className="rounded-xl border border-info/15 bg-info/8 p-3 text-xs">
+                      <div className="text-[10px] uppercase tracking-[0.16em] text-info/70 font-heading">Change Snapshot</div>
+                      <div className="mt-2 font-semibold">{getWeekoffRequestDescription(request, getUserName)}</div>
+                      <div className="mt-2 text-muted-foreground">
+                        Applied tag: {getWeekoffModeLabel(request)} in {getWeekoffScopeLabel(request)}.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {mode === 'supervisor' && (
+        <div className="mt-6 rounded-xl border border-border bg-card overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
+            <div>
+              <div className="flex items-center gap-2 text-sm font-bold font-heading">
+                <ArrowLeftRight size={15} className="text-primary" /> Week-Off Swap Queue
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                Pending week-off planning requests waiting for admin review.
+              </div>
+            </div>
+            <div className="rounded-xl border border-border bg-muted/20 px-4 py-2 text-right">
+              <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60 font-heading">Pending Requests</div>
+              <div className="text-sm font-semibold">{pendingWeekoffQueue.length}</div>
+            </div>
+          </div>
+
+          {pendingWeekoffQueue.length === 0 ? (
+            <div className="px-5 py-10 text-center text-sm text-muted-foreground">
+              No pending week-off planning requests in the current team scope.
+            </div>
+          ) : (
+            <div className="space-y-4 px-5 py-5">
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+                <div className="rounded-xl border border-border bg-muted/20 p-3 text-xs">
+                  <div className="text-muted-foreground">Queue Items</div>
+                  <div className="mt-1 text-lg font-black font-heading">{pendingWeekoffQueue.length}</div>
+                </div>
+                <div className="rounded-xl border border-border bg-muted/20 p-3 text-xs">
+                  <div className="text-muted-foreground">Month In View</div>
+                  <div className="mt-1 text-sm font-semibold">{formatMonthYear(visibleMonthKey)}</div>
+                </div>
+                <div className="rounded-xl border border-border bg-muted/20 p-3 text-xs">
+                  <div className="text-muted-foreground">Request Type Mix</div>
+                  <div className="mt-1 text-sm font-semibold">
+                    {Array.from(new Set(pendingWeekoffQueue.map(request => getWeekoffModeLabel(request)))).join(' • ')}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+              {pendingWeekoffQueue.map(request => (
+                <div key={`queue-row-${request.id}`} className="rounded-2xl border border-border bg-gradient-to-br from-warning/8 to-background p-4 shadow-sm">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60 font-heading">Pending Pair</div>
+                      <div className="mt-1 text-sm font-bold">{getUserName(request.sourceGuideId)}</div>
+                      <div className="mt-1 text-[11px] text-muted-foreground">
+                        {request.peerGuideId ? `Requested with ${getUserName(request.peerGuideId)}` : 'Single-guide change'}
+                      </div>
+                    </div>
+                    <span className="rounded-full border border-warning/20 bg-warning/10 px-3 py-1 text-[10px] font-bold text-warning">
+                      Pending Admin
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-xs lg:grid-cols-4">
+                    <div className="rounded-xl border border-border bg-background/80 p-3">
+                      <div className="text-muted-foreground">Change Type</div>
+                      <div className="mt-1 font-semibold">{getWeekoffModeLabel(request)}</div>
+                    </div>
+                    <div className="rounded-xl border border-border bg-background/80 p-3">
+                      <div className="text-muted-foreground">Scope</div>
+                      <div className="mt-1 font-semibold">{getWeekoffScopeLabel(request)}</div>
+                    </div>
+                    <div className="rounded-xl border border-border bg-background/80 p-3">
+                      <div className="text-muted-foreground">Submitted On</div>
+                      <div className="mt-1 font-semibold">{formatDate(request.history[0]?.at ?? request.sourceDate)}</div>
+                    </div>
+                    <div className="rounded-xl border border-border bg-background/80 p-3">
+                      <div className="text-muted-foreground">Requested By</div>
+                      <div className="mt-1 font-semibold">{getUserName(request.requesterId)}</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+                    <div className="rounded-xl border border-border bg-background/80 p-3 text-xs">
+                      <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60 font-heading">Request Details</div>
+                      <div className="mt-2 font-semibold">{getWeekoffRequestDescription(request, getUserName)}</div>
+                      {request.comment ? (
+                        <div className="mt-2 text-muted-foreground">Comment: {request.comment}</div>
+                      ) : null}
+                    </div>
+                    <div className="rounded-xl border border-warning/20 bg-warning/10 p-3 text-xs">
+                      <div className="text-[10px] uppercase tracking-[0.16em] text-warning/70 font-heading">Admin Review Focus</div>
+                      <div className="mt-2 font-semibold">
+                        Validate coverage for {request.periodType === 'Month' ? 'the repeating month pattern' : 'the selected week window'} before final approval.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {mode === 'supervisor' && (
+        <Modal
+          open={!!selectedGuideRow}
+          onClose={() => {
+            setActiveGuideId(null);
+            setPeerGuideId('');
+            setComment('');
+            setSwapScope('Week');
+            setSwapMode('WeekSwap');
+          }}
+          title="Week-Off Planning"
+        >
           {selectedGuideRow && (
             <div className="space-y-5">
               <div className="rounded-xl border border-border bg-muted/20 p-4">
                 <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60 font-heading">Selected Guide</div>
                 <div className="mt-2 text-sm font-semibold">{selectedGuideRow.agent.name}</div>
                 <div className="mt-1 text-xs text-muted-foreground">
-                  Week {formatDate(selectedWeekStart)} to {formatDate(weekEndKey)}
+                  {swapScope === 'Month'
+                    ? `${formatMonthYear(visibleMonth)} planning`
+                    : `Week ${formatDate(selectedWeekStart)} to ${formatDate(weekEndKey)}`}
                 </div>
+                {swapScope === 'Month' && selectedGuideRecurringWeekoff ? (
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    Regular week off: {selectedGuideRecurringWeekoff.label}
+                  </div>
+                ) : null}
               </div>
 
               <div>
-                <label className="block text-[10px] tracking-section uppercase text-muted-foreground mb-1.5 font-semibold">Swap With Guide</label>
-                <select
-                  value={peerGuideId}
-                  onChange={event => {
-                    setPeerGuideId(event.target.value);
-                    setPeerDate('');
-                  }}
-                  className="glass-input text-sm"
-                >
-                  <option value="">Select a guide...</option>
-                  {peerGuideChoices.map(agent => (
-                    <option key={agent.id} value={agent.id}>{agent.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-3">
-                  <div className="text-xs font-semibold">{selectedGuideRow.agent.name} Week Off</div>
-                  {selectedGuideRow.weekOffDates.length === 0 ? (
-                    <div className="rounded-xl border border-border bg-muted/20 px-4 py-5 text-xs text-muted-foreground text-center">
-                      No week-off dates in this week.
-                    </div>
-                  ) : selectedGuideRow.weekOffDates.map(date => (
+                <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Scope</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'Week', label: 'Week', description: 'Use a single week for a move or a swap.' },
+                    { id: 'Month', label: 'Month', description: 'Swap the full month week-off pattern with another guide.' },
+                  ].map(option => (
                     <button
-                      key={date}
+                      key={option.id}
                       type="button"
-                      onClick={() => setSourceDate(date)}
-                      className={`w-full rounded-xl border px-3 py-3 text-left text-xs transition-colors ${
-                        sourceDate === date
+                      onClick={() => {
+                        setSwapScope(option.id as 'Month' | 'Week');
+                        setPeerGuideId('');
+                        setComment('');
+                      }}
+                      className={`rounded-xl border px-4 py-3 text-left transition-colors ${
+                        swapScope === option.id
                           ? 'border-primary/25 bg-primary/8 text-primary'
                           : 'border-border bg-background hover:bg-muted/30'
                       }`}
                     >
-                      {formatDate(date)}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="space-y-3">
-                  <div className="text-xs font-semibold">{peerGuideRow?.agent.name ?? 'Peer'} Week Off</div>
-                  {!peerGuideRow ? (
-                    <div className="rounded-xl border border-border bg-muted/20 px-4 py-5 text-xs text-muted-foreground text-center">
-                      Select another guide to view available week-off days.
-                    </div>
-                  ) : peerGuideRow.weekOffDates.length === 0 ? (
-                    <div className="rounded-xl border border-border bg-muted/20 px-4 py-5 text-xs text-muted-foreground text-center">
-                      No week-off dates available for this week.
-                    </div>
-                  ) : peerGuideRow.weekOffDates.map(date => (
-                    <button
-                      key={date}
-                      type="button"
-                      onClick={() => setPeerDate(date)}
-                      className={`w-full rounded-xl border px-3 py-3 text-left text-xs transition-colors ${
-                        peerDate === date
-                          ? 'border-info/25 bg-info/8 text-info'
-                          : 'border-border bg-background hover:bg-muted/30'
-                      }`}
-                    >
-                      {formatDate(date)}
+                      <div className="text-sm font-semibold">{option.label}</div>
+                      <div className="mt-1 text-[11px] opacity-80">{option.description}</div>
                     </button>
                   ))}
                 </div>
               </div>
 
+              {swapScope === 'Week' && (
+                <div>
+                  <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Select Week</label>
+                  <div className="flex flex-wrap gap-2">
+                    {weekOptions.map(weekStart => {
+                      const key = toDateStr(weekStart);
+                      return (
+                        <button
+                          key={`modal-week-${key}`}
+                          type="button"
+                          onClick={() => setSelectedWeekStart(key)}
+                          className={`rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
+                            selectedWeekStart === key
+                              ? 'border border-info/20 bg-info/12 text-info'
+                              : 'border border-border bg-background hover:bg-muted/30'
+                          }`}
+                        >
+                          {formatWeekRange(weekStart)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div>
-                <label className="block text-[10px] tracking-section uppercase text-muted-foreground mb-1.5 font-semibold">Comment</label>
+                <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Week-Off Change Type</label>
+                <div className="grid grid-cols-1 gap-2">
+                  {(swapScope === 'Month'
+                    ? [
+                      {
+                        id: 'MonthSwap',
+                        label: 'Swap week off',
+                        description: 'Swap the entire month week-off pattern with another guide.',
+                      },
+                    ]
+                    : [
+                      {
+                        id: 'WeekMove',
+                        label: 'Move week off',
+                        description: 'Move one guide week off within the selected week. Pending with validation.',
+                      },
+                      {
+                        id: 'WeekSwap',
+                        label: 'Swap week off',
+                        description: 'Swap one week off between two specific guides in the selected week.',
+                      },
+                    ]).map(option => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => {
+                        setSwapMode(option.id as 'MonthSwap' | 'WeekMove' | 'WeekSwap');
+                        if (option.id === 'WeekMove') setPeerGuideId('');
+                      }}
+                      className={`rounded-xl border px-4 py-3 text-left transition-colors ${
+                        swapMode === option.id
+                          ? 'border-primary/25 bg-primary/8 text-primary'
+                          : 'border-border bg-background hover:bg-muted/30'
+                      }`}
+                    >
+                      <div className="text-sm font-semibold">{option.label}</div>
+                      <div className="mt-1 text-[11px] opacity-80">{option.description}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {(swapScope === 'Month' || swapMode === 'WeekSwap') && (
+                <div>
+                  <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Swap With Guide</label>
+                  <select
+                    value={peerGuideId}
+                    onChange={event => {
+                      setPeerGuideId(event.target.value);
+                      setPeerDate('');
+                    }}
+                    className="glass-input text-sm"
+                  >
+                    <option value="">Select a guide...</option>
+                    {peerGuideChoices.map(agent => (
+                      <option key={agent.id} value={agent.id}>{agent.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {swapMode === 'WeekMove' && (
+                <div className="rounded-xl border border-info/20 bg-info/10 px-4 py-3 text-xs text-info">
+                  Validation note: this move keeps the request on the same guide and will still go to admin for review before the schedule changes.
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="space-y-3">
+                  <div className="text-xs font-semibold">
+                    {selectedGuideRow.agent.name} {swapScope === 'Month' ? 'Regular Week Off' : 'Week Off'}
+                  </div>
+                  {swapScope === 'Month' ? (
+                    !selectedGuideRecurringWeekoff ? (
+                      <div className="rounded-xl border border-border bg-muted/20 px-4 py-5 text-center text-xs text-muted-foreground">
+                        No regular week-off pattern found in this selection.
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setSourceDate(selectedGuideRecurringWeekoff.sampleDate)}
+                        className={`w-full rounded-xl border px-3 py-3 text-left text-xs transition-colors ${
+                          sourceDate === selectedGuideRecurringWeekoff.sampleDate
+                            ? 'border-primary/25 bg-primary/8 text-primary'
+                            : 'border-border bg-background hover:bg-muted/30'
+                        }`}
+                      >
+                        {formatRecurringWeekoff(selectedGuideRecurringWeekoff)}
+                        <div className="mt-1 opacity-80">
+                          {selectedGuideRecurringWeekoff.count} week-off occurrence{selectedGuideRecurringWeekoff.count === 1 ? '' : 's'} in {formatMonthYear(visibleMonth)}
+                        </div>
+                      </button>
+                    )
+                  ) : selectedGuideRow.weekOffDates.length === 0 ? (
+                    <div className="rounded-xl border border-border bg-muted/20 px-4 py-5 text-center text-xs text-muted-foreground">
+                      No week-off dates available in this week.
+                    </div>
+                  ) : (
+                    selectedGuideRow.weekOffDates.map(date => (
+                      <button
+                        key={`source-${date}`}
+                        type="button"
+                        onClick={() => setSourceDate(date)}
+                        className={`w-full rounded-xl border px-3 py-3 text-left text-xs transition-colors ${
+                          sourceDate === date
+                            ? 'border-primary/25 bg-primary/8 text-primary'
+                            : 'border-border bg-background hover:bg-muted/30'
+                        }`}
+                      >
+                        {formatWeekdayWithDate(date)}
+                      </button>
+                    ))
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <div className="text-xs font-semibold">
+                    {swapMode === 'WeekMove'
+                      ? `${selectedGuideRow.agent.name} New Week Off`
+                      : `${peerGuideId ? getUserName(peerGuideId) : 'Peer'} ${swapScope === 'Month' ? 'Regular Week Off' : 'Week Off'}`}
+                  </div>
+                  {swapMode === 'WeekMove' ? (
+                    selectedGuideWeekMoveTargets.length === 0 ? (
+                      <div className="rounded-xl border border-border bg-muted/20 px-4 py-5 text-center text-xs text-muted-foreground">
+                        No alternate workday is available in this week.
+                      </div>
+                    ) : (
+                      selectedGuideWeekMoveTargets.map(date => (
+                        <button
+                          key={`target-${date}`}
+                          type="button"
+                          onClick={() => setPeerDate(date)}
+                          className={`w-full rounded-xl border px-3 py-3 text-left text-xs transition-colors ${
+                            peerDate === date
+                              ? 'border-info/25 bg-info/8 text-info'
+                              : 'border-border bg-background hover:bg-muted/30'
+                          }`}
+                        >
+                          {formatWeekdayWithDate(date)}
+                        </button>
+                      ))
+                    )
+                  ) : (
+                    swapScope === 'Month' ? (
+                      !peerGuideId ? (
+                        <div className="rounded-xl border border-border bg-muted/20 px-4 py-5 text-center text-xs text-muted-foreground">
+                          Select another guide to view the regular week-off pattern.
+                        </div>
+                      ) : !peerGuideRecurringWeekoff ? (
+                        <div className="rounded-xl border border-border bg-muted/20 px-4 py-5 text-center text-xs text-muted-foreground">
+                          No regular week-off pattern available for this selection.
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setPeerDate(peerGuideRecurringWeekoff.sampleDate)}
+                          className={`w-full rounded-xl border px-3 py-3 text-left text-xs transition-colors ${
+                            peerDate === peerGuideRecurringWeekoff.sampleDate
+                              ? 'border-info/25 bg-info/8 text-info'
+                              : 'border-border bg-background hover:bg-muted/30'
+                          }`}
+                        >
+                          {formatRecurringWeekoff(peerGuideRecurringWeekoff)}
+                          <div className="mt-1 opacity-80">
+                            {peerGuideRecurringWeekoff.count} week-off occurrence{peerGuideRecurringWeekoff.count === 1 ? '' : 's'} in {formatMonthYear(visibleMonth)}
+                          </div>
+                        </button>
+                      )
+                    ) : !peerGuideRow ? (
+                      <div className="rounded-xl border border-border bg-muted/20 px-4 py-5 text-center text-xs text-muted-foreground">
+                        Select another guide to view available week-off days.
+                      </div>
+                    ) : (peerGuideRow.weekOffDates ?? []).length === 0 ? (
+                      <div className="rounded-xl border border-border bg-muted/20 px-4 py-5 text-center text-xs text-muted-foreground">
+                        No week-off dates available for this selection.
+                      </div>
+                    ) : (
+                      (peerGuideRow.weekOffDates ?? []).map(date => (
+                      <button
+                        key={`peer-${date}`}
+                        type="button"
+                        onClick={() => setPeerDate(date)}
+                        className={`w-full rounded-xl border px-3 py-3 text-left text-xs transition-colors ${
+                          peerDate === date
+                            ? 'border-info/25 bg-info/8 text-info'
+                            : 'border-border bg-background hover:bg-muted/30'
+                        }`}
+                      >
+                        {formatWeekdayWithDate(date)}
+                      </button>
+                      ))
+                    )
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border bg-background/80 p-4">
+                <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60 font-heading">Post Week-Off Summary</div>
+                <div className="mt-2 text-sm font-semibold">
+                  {swapScope === 'Month'
+                    ? selectedGuideRecurringWeekoff && peerGuideRecurringWeekoff
+                      ? `${selectedGuideRow.agent.name} currently has ${selectedGuideRecurringWeekoff.label} as the regular week off and ${peerGuideId ? getUserName(peerGuideId) : 'the selected guide'} currently has ${peerGuideRecurringWeekoff.label}. After approval, those repeating week-off days will swap for ${formatMonthYear(visibleMonth)}.`
+                      : `${selectedGuideRow.agent.name} swaps the regular ${formatMonthYear(visibleMonth)} week-off pattern with ${peerGuideId ? getUserName(peerGuideId) : 'the selected guide'}.`
+                    : swapMode === 'WeekMove'
+                      ? `${selectedGuideRow.agent.name} moves the week off from ${sourceDate ? formatWeekdayWithDate(sourceDate) : 'the current off day'} to ${peerDate ? formatWeekdayWithDate(peerDate) : 'the selected workday'}.`
+                      : `${selectedGuideRow.agent.name} swaps ${sourceDate ? formatWeekdayWithDate(sourceDate) : 'the selected off day'} with ${peerGuideId ? getUserName(peerGuideId) : 'the paired guide'} on ${peerDate ? formatWeekdayWithDate(peerDate) : 'their selected off day'}.`}
+                </div>
+                <div className="mt-2 text-xs text-muted-foreground">
+                  Admin approval is still required before the updated week-off pattern appears in the published schedule.
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Comment</label>
                 <textarea
                   value={comment}
                   onChange={event => setComment(event.target.value)}
@@ -733,16 +1369,16 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
               <div className="flex justify-end gap-3">
                 <button
                   onClick={() => setActiveGuideId(null)}
-                  className="px-5 py-2.5 rounded-xl border border-border text-sm font-semibold hover:bg-muted/30 transition-colors"
+                  className="rounded-xl border border-border px-5 py-2.5 text-sm font-semibold transition-colors hover:bg-muted/30"
                 >
                   Close
                 </button>
                 <button
                   onClick={handleSubmitSwap}
-                  disabled={submitting || !sourceDate || !peerDate || !peerGuideId}
-                  className="px-5 py-2.5 rounded-xl btn-primary-gradient text-primary-foreground text-sm font-bold flex items-center gap-2 disabled:opacity-40"
+                  disabled={submitting || !sourceDate || !peerDate || ((swapScope === 'Month' || swapMode === 'WeekSwap') && !peerGuideId)}
+                  className="flex items-center gap-2 rounded-xl btn-primary-gradient px-5 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-40"
                 >
-                  <Send size={14} /> {submitting ? 'Sending...' : 'Send to Admin'}
+                  <Send size={14} /> {submitting ? 'Sending...' : 'Send for Admin Approval'}
                 </button>
               </div>
             </div>

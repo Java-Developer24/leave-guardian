@@ -192,8 +192,10 @@ export default function AgentSummary() {
   const swapSourceLeave = relatedLeaves.find(leave => leave.id === swapLeaveId && leave.requesterId === currentUser?.id) ?? null;
   const cancelLeave = relatedLeaves.find(leave => leave.id === cancelLeaveId && leave.requesterId === currentUser?.id) ?? null;
   const selectedSwapPeer = deptPeers.find(peer => peer.id === swapPeer);
+  const selectedSwapPeerLeaveLabel = selectedSwapPeer ? `${selectedSwapPeer.name}'s Leaves` : 'Selected Agent Leaves';
   const swapSourceBufferAlert = swapSourceLeave ? getBufferAlert(swapSourceLeave.date) : null;
   const swapPeerBufferAlert = swapPeerDate ? getBufferAlert(swapPeerDate) : null;
+  const isSameDaySwapSelection = Boolean(swapSourceLeave && swapPeerDate && swapSourceLeave.date === swapPeerDate);
 
   const swapPeerLeaves = useMemo(() => {
     if (!swapPeer || !swapSourceLeave) return [];
@@ -213,6 +215,11 @@ export default function AgentSummary() {
   const handleSwapRequest = async () => {
     if (!swapSourceLeave || !swapPeer || !swapPeerDate || !currentUser) {
       showToast('Select a peer and a peer leave first', 'error');
+      return;
+    }
+
+    if (swapSourceLeave.date === swapPeerDate) {
+      showToast('Same-day swaps are not allowed', 'error');
       return;
     }
 
@@ -545,7 +552,7 @@ export default function AgentSummary() {
               </div>
 
               <div className="space-y-3">
-                <div className="text-xs font-semibold">Peer Leaves</div>
+                <div className="text-xs font-semibold">{selectedSwapPeerLeaveLabel}</div>
                 {!swapPeer ? (
                   <div className="rounded-xl border border-border bg-muted/20 px-4 py-6 text-xs text-muted-foreground text-center">
                     Select a peer first to view available leaves.
@@ -556,20 +563,31 @@ export default function AgentSummary() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {swapPeerLeaves.map(leave => (
-                      <LeaveChoiceCard
-                        key={leave.id}
-                        title={formatDate(leave.date)}
-                        subtitle={`${leave.type} • ${leave.status}`}
-                        meta={leave.reason || 'No remarks added'}
-                        selected={swapPeerDate === leave.date}
-                        onClick={() => setSwapPeerDate(leave.date)}
-                      />
-                    ))}
+                    {swapPeerLeaves.map(leave => {
+                      const isSameDayOption = leave.date === swapSourceLeave.date;
+
+                      return (
+                        <LeaveChoiceCard
+                          key={leave.id}
+                          title={formatDate(leave.date)}
+                          subtitle={isSameDayOption ? `${leave.type} • ${leave.status} • Same day unavailable` : `${leave.type} • ${leave.status}`}
+                          meta={isSameDayOption ? 'Pick a different leave date to continue with the swap.' : (leave.reason || 'No remarks added')}
+                          selected={!isSameDayOption && swapPeerDate === leave.date}
+                          disabled={isSameDayOption}
+                          onClick={() => setSwapPeerDate(leave.date)}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </div>
             </div>
+
+            {isSameDaySwapSelection && (
+              <div className="rounded-xl border border-destructive/15 bg-destructive/5 px-4 py-3 text-xs font-semibold text-destructive">
+                Same-day swaps are not allowed. Choose a different leave date for {selectedSwapPeer?.name ?? 'the selected agent'}.
+              </div>
+            )}
 
             {(swapSourceBufferAlert || swapPeerBufferAlert) && (
               <div className="rounded-xl border border-warning/20 bg-warning/10 px-4 py-3 text-xs font-semibold text-warning space-y-1">
@@ -598,6 +616,10 @@ export default function AgentSummary() {
                 onClick={() => {
                   if (!swapPeer || !swapPeerDate) {
                     showToast('Select a peer and peer leave first', 'error');
+                    return;
+                  }
+                  if (swapSourceLeave.date === swapPeerDate) {
+                    showToast('Same-day swaps are not allowed', 'error');
                     return;
                   }
                   setSwapConfirmOpen(true);
@@ -634,7 +656,7 @@ export default function AgentSummary() {
             <button onClick={() => setSwapConfirmOpen(false)} className="px-5 py-2.5 rounded-xl border border-border text-sm font-semibold hover:bg-muted/30 transition-colors">
               Back
             </button>
-            <button onClick={handleSwapRequest} className="px-5 py-2.5 rounded-xl btn-primary-gradient text-primary-foreground text-sm font-bold">
+            <button onClick={handleSwapRequest} disabled={isSameDaySwapSelection} className="px-5 py-2.5 rounded-xl btn-primary-gradient text-primary-foreground text-sm font-bold disabled:opacity-40">
               Confirm Request
             </button>
           </div>

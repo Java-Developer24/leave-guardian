@@ -187,12 +187,14 @@ export default function AgentLeave() {
   }, [currentMonthKey, leaves, swapPeer, todayKey]);
 
   const selectedPeer = deptPeers.find(peer => peer.id === swapPeer);
+  const selectedPeerLeaveLabel = selectedPeer ? `${selectedPeer.name}'s Leaves` : 'Selected Agent Leaves';
   const selectedDateAlerts = Array.from(new Set(selectedDates)).sort().flatMap(date => {
     const message = formatBufferAlert(date, 72, today);
     return message ? [{ date, message }] : [];
   });
   const swapMyDateBufferAlert = swapMyDate ? formatBufferAlert(swapMyDate, 72, today) : null;
   const swapPeerDateBufferAlert = swapPeerDate ? formatBufferAlert(swapPeerDate, 72, today) : null;
+  const isSameDaySwapSelection = Boolean(swapMyDate && swapPeerDate && swapMyDate === swapPeerDate);
   const submittedApprovalTimer = submittedRequestInfo
     ? getApprovalCountdown(submittedRequestInfo.submittedAt, 72, liveNow)
     : null;
@@ -272,6 +274,11 @@ export default function AgentLeave() {
   const handleSwapSubmit = async () => {
     if (!swapPeer || !swapMyDate || !swapPeerDate) {
       showToast('Please fill all swap fields', 'error');
+      return;
+    }
+
+    if (swapMyDate === swapPeerDate) {
+      showToast('Same-day swaps are not allowed', 'error');
       return;
     }
 
@@ -506,7 +513,7 @@ export default function AgentLeave() {
                 </div>
 
                 <div className="space-y-3">
-                  <label className="block text-xs font-semibold">Peer Leaves</label>
+                  <label className="block text-xs font-semibold">{selectedPeerLeaveLabel}</label>
                   <div className="space-y-3">
                     {!swapPeer ? (
                       <div className="rounded-xl border border-border bg-muted/20 px-4 py-6 text-xs text-muted-foreground text-center">
@@ -517,16 +524,21 @@ export default function AgentLeave() {
                         {selectedPeer?.name ?? 'This peer'} has no available leaves for the current month.
                       </div>
                     ) : (
-                      peerLeaves.map(leave => (
-                        <LeaveChoiceCard
-                          key={leave.id}
-                          title={formatDate(leave.date)}
-                          subtitle={`${leave.type} • ${leave.status}`}
-                          meta={leave.reason || 'No remarks added'}
-                          selected={swapPeerDate === leave.date}
-                          onClick={() => setSwapPeerDate(leave.date)}
-                        />
-                      ))
+                      peerLeaves.map(leave => {
+                        const isSameDayOption = Boolean(swapMyDate && leave.date === swapMyDate);
+
+                        return (
+                          <LeaveChoiceCard
+                            key={leave.id}
+                            title={formatDate(leave.date)}
+                            subtitle={isSameDayOption ? `${leave.type} • ${leave.status} • Same day unavailable` : `${leave.type} • ${leave.status}`}
+                            meta={isSameDayOption ? 'Pick a different leave date to continue with the swap.' : (leave.reason || 'No remarks added')}
+                            selected={!isSameDayOption && swapPeerDate === leave.date}
+                            disabled={isSameDayOption}
+                            onClick={() => setSwapPeerDate(leave.date)}
+                          />
+                        );
+                      })
                     )}
                   </div>
                 </div>
@@ -538,6 +550,12 @@ export default function AgentLeave() {
                 <div className="text-right text-[10px] text-muted-foreground/40 mt-0.5">{swapComments.length}/500</div>
               </div>
 
+              {isSameDaySwapSelection && (
+                <div className="mt-5 rounded-xl border border-destructive/15 bg-destructive/5 px-4 py-3 text-xs font-semibold text-destructive">
+                  Same-day swaps are not allowed. Choose a different leave date for {selectedPeer?.name ?? 'the selected agent'}.
+                </div>
+              )}
+
               {(swapMyDateBufferAlert || swapPeerDateBufferAlert) && (
                 <div className="mt-5 rounded-xl border border-warning/20 bg-warning/10 px-4 py-3 text-xs font-semibold text-warning space-y-1">
                   {swapMyDateBufferAlert && <div>Your leave: {swapMyDateBufferAlert}</div>}
@@ -546,7 +564,7 @@ export default function AgentLeave() {
               )}
 
               <div className="flex gap-3 mt-5">
-                <button onClick={handleSwapSubmit} disabled={submitting || !swapPeer || !swapMyDate || !swapPeerDate} className="flex-1 btn-primary-gradient font-bold py-3 rounded-xl text-sm disabled:opacity-40">
+                <button onClick={handleSwapSubmit} disabled={submitting || !swapPeer || !swapMyDate || !swapPeerDate || isSameDaySwapSelection} className="flex-1 btn-primary-gradient font-bold py-3 rounded-xl text-sm disabled:opacity-40">
                   {submitting ? 'Submitting...' : 'Submit Swap Request'}
                 </button>
                 <button onClick={() => { setSwapPeer(''); setSwapMyDate(prefetchedSwapDate); setSwapPeerDate(''); setSwapComments(''); }} className="px-6 py-3 rounded-xl border border-border text-sm font-semibold hover:bg-muted/30 transition-colors">
