@@ -219,7 +219,7 @@ export default function AgentHome() {
         <motion.div variants={staggerItem}><KpiCard label="Approved" value={approved} icon={<CheckCircle size={20} />} accent="success" trend={{ value: `${myOwnLeaves.length > 0 ? Math.round((approved / myOwnLeaves.length) * 100) : 0}%`, direction: 'up' }} /></motion.div>
         <motion.div variants={staggerItem}><KpiCard label="Pending" value={pending} icon={<Clock size={20} />} accent="warning" /></motion.div>
         <motion.div variants={staggerItem}><KpiCard label="Rejected" value={rejected} icon={<XCircle size={20} />} accent="primary" /></motion.div>
-        <motion.div variants={staggerItem}><KpiCard label="Leaves Swaps" value={leaveSwaps} icon={<ArrowLeftRight size={20} />} accent="info" /></motion.div>
+        <motion.div variants={staggerItem}><KpiCard label="Leave Swaps" value={leaveSwaps} icon={<ArrowLeftRight size={20} />} accent="info" /></motion.div>
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -318,7 +318,7 @@ export default function AgentHome() {
             <div className="space-y-2">
               <Link to="/agent/leave" className={quickActionClass}><Send size={14} /> Apply for Leave</Link>
               <Link to="/agent/summary" className={quickActionClass}><FileText size={14} /> View Summary</Link>
-              <Link to="/agent/leave?tab=swap" className={quickActionClass}><ArrowLeftRight size={14} /> Leaves Swaps</Link>
+              <Link to="/agent/leave?tab=swap" className={quickActionClass}><ArrowLeftRight size={14} /> Leave Swaps</Link>
             </div>
           </div>
         </div>

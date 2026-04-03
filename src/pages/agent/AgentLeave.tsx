@@ -54,8 +54,8 @@ function LeaveChoiceCard({
         disabled
           ? 'cursor-not-allowed border-border/50 bg-muted/20 text-muted-foreground/50'
           : selected
-            ? 'border-primary/40 bg-primary/8 shadow-[0_0_0_1px_hsla(354,100%,64%,0.12)]'
-            : 'border-border bg-card/70 hover:border-primary/30 hover:bg-primary/5'
+            ? 'border-primary/30 bg-primary/5'
+            : 'border-border bg-card/70 hover:border-primary/40 hover:bg-primary/8 hover:shadow-[0_0_0_1px_hsla(354,100%,64%,0.12)]'
       }`}
     >
       <div className="text-sm font-semibold">{title}</div>
@@ -380,7 +380,7 @@ export default function AgentLeave() {
                 <h3 className="text-xs font-bold mb-3 font-heading">Legend & Day Status</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {[
-                    { title: 'Quota used', desc: `${quotaUsed} of ${rules.agentMonthlyLeaveCap} planned leaves used for ${currentMonthLabel}`, tone: 'border-success/20 bg-success/8 text-success' },
+                    // { title: 'Quota used', desc: `${quotaUsed} of ${rules.agentMonthlyLeaveCap} planned leaves used for ${currentMonthLabel}`, tone: 'border-success/20 bg-success/8 text-success' },
                     { title: 'Pending request', desc: `${visiblePendingDates.length} planned day(s) are waiting on approval in ${currentMonthLabel}`, tone: 'border-info/20 bg-info/8 text-info' },
                     { title: 'Blocked day', desc: `${blockedDates.size} day(s) in ${currentMonthLabel} are fully blocked`, tone: 'border-slate-300/60 bg-slate-200/60 text-slate-700' },
                     { title: 'Approved leave', desc: `${visibleApprovedDates.length} planned day(s) already approved in ${currentMonthLabel}`, tone: 'border-success/20 bg-success/8 text-success' },
@@ -578,7 +578,7 @@ export default function AgentLeave() {
               <div className="space-y-2 text-xs text-muted-foreground">
                 <p>1. Select a peer from your department.</p>
                 <p>2. Choose one of your current-month leaves.</p>
-                <p>3. Choose one of the peer's current-month leaves.</p>
+                <p>3. Choose one of the peer's current-month leaves and submit request.</p>
                 <p>4. Peer will receive a notification to accept.</p>
                 <p>5. Once accepted, supervisor reviews the swap request and approves it.</p>
               </div>
@@ -622,7 +622,7 @@ export default function AgentLeave() {
       <Modal open={confirmModalOpen} onClose={() => setConfirmModalOpen(false)} title="Confirm Leave Request">
         <div className="space-y-5">
           <p className="text-sm text-muted-foreground">
-            This will submit the selected leave dates for supervisor approval. Dates that require manager review will also appear in the manager forecast tab.
+            This will submit the selected leave dates for supervisor approval.
           </p>
           <div className="rounded-xl border border-info/20 bg-info/10 px-4 py-3 text-xs font-semibold text-info">
             Once submitted, the supervisor has 72 hours to approve this leave request. The live countdown will appear across your guide dashboard and leave summary.

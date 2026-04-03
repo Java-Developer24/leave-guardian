@@ -265,8 +265,8 @@ export default function AgentSummary() {
                 </button>
               </PopoverTrigger>
               <PopoverContent align="end" className="w-60 p-2">
-                <div className="mb-2 px-2 pt-1 text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60 font-heading">
-                  Backdated Months
+                <div className="mb-2 px-2 pt-1 text-[10px] uppercase tracking-[0.16em] text-black font-heading text-bold">
+                  2026
                 </div>
                 <div className="space-y-1">
                   {monthOptions.map(option => (
@@ -299,7 +299,7 @@ export default function AgentSummary() {
         <motion.div variants={staggerItem} className="bg-card border border-border rounded-xl p-5">
           <div className="flex items-center justify-between gap-3 mb-4">
             <div>
-              <div className="text-sm font-bold font-heading">Pending Approval Tracker</div>
+              <div className="text-sm font-bold font-heading">Pending Requests</div>
               <div className="text-[11px] text-muted-foreground">Supervisor SLA countdown for your submitted leave requests.</div>
             </div>
             <Clock size={16} className="text-warning" />
@@ -338,7 +338,7 @@ export default function AgentSummary() {
         <motion.div variants={staggerItem} className="bg-card border border-border rounded-xl p-5">
           <div className="flex items-center justify-between gap-3 mb-4">
             <div>
-              <div className="text-sm font-bold font-heading">Next Actionable Leave</div>
+              <div className="text-sm font-bold font-heading">Active Leaves</div>
               <div className="text-[11px] text-muted-foreground">Current-month leave you can still manage.</div>
             </div>
             <ArrowLeftRight size={16} className="text-info" />
@@ -673,7 +673,16 @@ export default function AgentSummary() {
               <div className="font-semibold">{formatDate(cancelLeave.date)}</div>
               <div className="text-muted-foreground mt-1">{cancelLeave.type} • {cancelLeave.status}</div>
             </div>
+            <textarea
+                value={swapComment}
+                onChange={event => setSwapComment(event.target.value)}
+                rows={4}
+                maxLength={250}
+                className="glass-input resize-none text-sm"
+                placeholder="Add a comment for the cancel leave request..."
+              />
             <div className="flex justify-end gap-3">
+              
               <button onClick={() => { setCancelLeaveId(null); setCancelConfirmOpen(false); }} className="px-5 py-2.5 rounded-xl border border-border text-sm font-semibold hover:bg-muted/30 transition-colors">
                 Keep Leave
               </button>
