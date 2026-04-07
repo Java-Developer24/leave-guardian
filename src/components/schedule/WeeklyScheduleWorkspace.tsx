@@ -934,21 +934,25 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
                     </div>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+                  <div className="mt-4 grid grid-cols-1 col-span-1 gap-3 ">
                     <div className="rounded-xl border border-border bg-background/80 p-3 text-xs">
                       <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60 font-heading">Approved Result</div>
                       <div className="mt-2 font-semibold">{getWeekoffResultSummary(request, getUserName)}</div>
                       {request.comment ? (
                         <div className="mt-2 text-muted-foreground">Comment: {request.comment}</div>
                       ) : null}
+                      <div className="mt-2 text-muted-foreground">
+                        Applied tag: {getWeekoffModeLabel(request)} in {getWeekoffScopeLabel(request)}.
+                      </div>
                     </div>
-                    <div className="rounded-xl border border-info/15 bg-info/8 p-3 text-xs">
+                    
+                    {/* <div className="rounded-xl border border-info/15 bg-info/8 p-3 text-xs">
                       <div className="text-[10px] uppercase tracking-[0.16em] text-info/70 font-heading">Change Snapshot</div>
                       <div className="mt-2 font-semibold">{getWeekoffRequestDescription(request, getUserName)}</div>
                       <div className="mt-2 text-muted-foreground">
                         Applied tag: {getWeekoffModeLabel(request)} in {getWeekoffScopeLabel(request)}.
                       </div>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               ))}

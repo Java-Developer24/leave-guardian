@@ -10,6 +10,7 @@ import type { LeaveRequest } from '@/core/entities';
 import { calcDailyShrinkage } from '@/core/utils/shrinkage';
 import {
   formatDate,
+  formatMonthYear,
   getApprovalCountdown,
   getMonthKey,
   toDateStr,
@@ -60,15 +61,14 @@ export default function SupervisorHome() {
   const deptId = currentUser?.departmentId ?? 'd1';
   const myDept = departments.find(department => department.id === deptId);
   const currentMonthKey = getMonthKey(today);
-  const currentMonthLabel = today.toLocaleDateString('en-US', { month: 'long' });
   const nextMonthDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
   const nextMonthKey = getMonthKey(nextMonthDate);
-  const nextMonthLabel = nextMonthDate.toLocaleDateString('en-US', { month: 'long' });
   const standardMandays = 25;
   const standardTargetHoursPerGuide = standardMandays * 8;
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
   const [approveReviewId, setApproveReviewId] = useState<string | null>(null);
   const [confirmApproveId, setConfirmApproveId] = useState<string | null>(null);
+  const [selectedMonthKey, setSelectedMonthKey] = useState(currentMonthKey);
 
   const deptLeaves = useMemo(() => leaves.filter(leave => leave.departmentId === deptId), [leaves, deptId]);
   const teamAgents = useMemo(
@@ -92,12 +92,31 @@ export default function SupervisorHome() {
     }, {}),
     [openForecastAlerts],
   );
+  const monthOptions = useMemo(() => {
+    const keys = new Set<string>([currentMonthKey, nextMonthKey]);
 
-  const pending = useMemo(
+    deptLeaves.forEach(leave => keys.add(leave.date.slice(0, 7)));
+    openForecastAlerts.forEach(alert => keys.add(alert.date.slice(0, 7)));
+
+    return Array.from(keys)
+      .sort((a, b) => b.localeCompare(a))
+      .map(key => ({
+        key,
+        label: formatMonthYear(key),
+      }));
+  }, [currentMonthKey, nextMonthKey, deptLeaves, openForecastAlerts]);
+  const selectedMonthDate = useMemo(() => new Date(`${selectedMonthKey}-01T00:00:00`), [selectedMonthKey]);
+  const selectedMonthLabel = formatMonthYear(selectedMonthDate);
+
+  const allPending = useMemo(
     () => deptLeaves
       .filter(leave => leave.status === 'PendingSupervisor')
       .sort((a, b) => (getHistoryEntry(b, 'Submitted')?.at ?? b.date).localeCompare(getHistoryEntry(a, 'Submitted')?.at ?? a.date)),
     [deptLeaves],
+  );
+  const pending = useMemo(
+    () => allPending.filter(leave => leave.date.startsWith(selectedMonthKey)),
+    [allPending, selectedMonthKey],
   );
   const pendingPreview = useMemo(() => pending.slice(0, 4), [pending]);
   const pendingColumns = useMemo(() => {
@@ -114,22 +133,26 @@ export default function SupervisorHome() {
     request => request.departmentId === deptId && request.status === 'PendingAdmin',
   ).length;
 
-  const currentMonthApprovedLeaves = deptLeaves.filter(
-    leave => leave.date.startsWith(currentMonthKey) && leave.status === 'Approved',
+  const selectedMonthApprovedLeaves = deptLeaves.filter(
+    leave => leave.date.startsWith(selectedMonthKey) && leave.status === 'Approved',
   );
-  const nextMonthPendingLeaves = deptLeaves.filter(
-    leave => leave.date.startsWith(nextMonthKey) && ['PendingSupervisor', 'PendingPeer', 'Submitted'].includes(leave.status),
+  const selectedMonthPendingLeaves = deptLeaves.filter(
+    leave => leave.date.startsWith(selectedMonthKey) && ['PendingSupervisor', 'PendingPeer', 'Submitted'].includes(leave.status),
   );
-  const currentMonthLeaveDays = currentMonthApprovedLeaves.reduce((total, leave) => total + leave.days, 0);
-  const currentMonthTargetHours = teamSize * standardTargetHoursPerGuide;
-  const currentMonthAchievedHours = Math.max(0, currentMonthTargetHours - (currentMonthLeaveDays * 8));
-  const currentMonthDeficitHours = Math.max(0, currentMonthTargetHours - currentMonthAchievedHours);
+  const selectedMonthForecastAlerts = useMemo(
+    () => openForecastAlerts.filter(alert => alert.date.startsWith(selectedMonthKey)),
+    [openForecastAlerts, selectedMonthKey],
+  );
+  const selectedMonthLeaveDays = selectedMonthApprovedLeaves.reduce((total, leave) => total + leave.days, 0);
+  const selectedMonthTargetHours = teamSize * standardTargetHoursPerGuide;
+  const selectedMonthAchievedHours = Math.max(0, selectedMonthTargetHours - (selectedMonthLeaveDays * 8));
+  const selectedMonthDeficitHours = Math.max(0, selectedMonthTargetHours - selectedMonthAchievedHours);
 
   const teamSummary = useMemo(() => {
     return teamAgents
       .map(agent => {
         const monthLeaves = deptLeaves.filter(
-          leave => leave.requesterId === agent.id && leave.date.startsWith(currentMonthKey),
+          leave => leave.requesterId === agent.id && leave.date.startsWith(selectedMonthKey),
         );
         const activeMonthLeaves = monthLeaves.filter(leave => !['Rejected', 'Cancelled'].includes(leave.status));
         const approvedMonthLeaves = monthLeaves.filter(leave => leave.status === 'Approved');
@@ -164,7 +187,7 @@ export default function SupervisorHome() {
         return b.requestCount - a.requestCount;
       })
       .slice(0, 15);
-  }, [teamAgents, deptLeaves, currentMonthKey, standardMandays, standardTargetHoursPerGuide]);
+  }, [teamAgents, deptLeaves, selectedMonthKey, standardMandays, standardTargetHoursPerGuide]);
 
   const reviewLeave = pending.find(leave => leave.id === approveReviewId) ?? null;
   const confirmApproveLeave = pending.find(leave => leave.id === confirmApproveId) ?? null;
@@ -198,11 +221,34 @@ export default function SupervisorHome() {
   return (
     <motion.div {...pageTransition}>
       <div className="mb-6">
-        <h1 className="text-2xl font-extrabold tracking-heading font-heading">
-          Welcome, <span className="text-primary">{currentUser?.name}</span>{' '}
-          <span className="text-muted-foreground text-lg">(Supervisor)</span>
-        </h1>
-        <p className="mt-1 text-xs text-muted-foreground">{myDept?.name ?? 'Department'}</p>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h1 className="text-2xl font-extrabold tracking-heading font-heading">
+              Welcome, <span className="text-primary">{currentUser?.name}</span>{' '}
+              <span className="text-muted-foreground text-lg">(Supervisor)</span>
+            </h1>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {myDept?.name ?? 'Department'} • Viewing {selectedMonthLabel}
+            </p>
+          </div>
+
+          <div className="w-full max-w-[260px] lg:w-[260px]">
+            <label className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              <Calendar size={12} className="text-primary" /> View Month
+            </label>
+            <select
+              value={selectedMonthKey}
+              onChange={event => setSelectedMonthKey(event.target.value)}
+              className="glass-input text-sm font-semibold"
+            >
+              {monthOptions.map(option => (
+                <option key={option.key} value={option.key}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
       <motion.div
@@ -214,30 +260,30 @@ export default function SupervisorHome() {
         <motion.div variants={staggerItem}>
           <KpiCard
             label="Leaves Taken"
-            value={currentMonthApprovedLeaves.length}
+            value={selectedMonthApprovedLeaves.length}
             icon={<Clock size={18} />}
             accent="warning"
-            subtitle={`Leaves taken in ${currentMonthLabel}`}
+            subtitle={`Leaves taken in ${selectedMonthLabel}`}
           />
         </motion.div>
         <motion.div variants={staggerItem}>
           <KpiCard
             label="Pending Leave Requests"
-            value={nextMonthPendingLeaves.length}
+            value={selectedMonthPendingLeaves.length}
             icon={<TrendingUp size={18} />}
             accent="info"
-            subtitle={`Pending leave requests for ${nextMonthLabel}`}
+            subtitle={`Pending leave requests for ${selectedMonthLabel}`}
           />
         </motion.div>
         <motion.div variants={staggerItem}>
           <KpiCard
             label="Production Hours"
-            value={`${currentMonthAchievedHours} hrs`}
+            value={`${selectedMonthAchievedHours} hrs`}
             icon={<Calendar size={18} />}
             accent="primary"
-            subtitle={currentMonthDeficitHours > 0
-              ? `Delivered from ${currentMonthTargetHours} planned hours in ${currentMonthLabel}`
-              : `All planned hours covered in ${currentMonthLabel}`}
+            subtitle={selectedMonthDeficitHours > 0
+              ? `Delivered from ${selectedMonthTargetHours} planned hours in ${selectedMonthLabel}`
+              : `All planned hours covered in ${selectedMonthLabel}`}
           />
         </motion.div>
         <motion.div variants={staggerItem}>
@@ -261,17 +307,12 @@ export default function SupervisorHome() {
             Transfer requests stay supervisor-only, while week-off approvals continue to route through admin review.
           </div>
         </div>
-        <Link
-          to="/supervisor/approvals?type=Transfer"
-          className="rounded-xl border border-border bg-background px-4 py-2.5 text-xs font-semibold transition-colors hover:bg-muted/30"
-        >
-          Transfer Leaves {pendingTransferCount > 0 ? `(${pendingTransferCount})` : ''}
-        </Link>
+       
         <Link
           to="/supervisor/schedule"
           className="rounded-xl border border-border bg-background px-4 py-2.5 text-xs font-semibold transition-colors hover:bg-muted/30"
         >
-          Team Schedule {pendingWeekoffSwaps > 0 ? `(${pendingWeekoffSwaps})` : ''}
+          Team Schedule 
         </Link>
         <Link
           to="/supervisor/approvals"
@@ -282,12 +323,22 @@ export default function SupervisorHome() {
       </div>
 
       <div className="mb-6 rounded-xl border border-border bg-card p-5">
-        <div className="text-sm font-bold font-heading">Forecast Attention</div>
-        <div className="mt-1 text-[11px] text-muted-foreground">
-          Guides with forecast-backed leave impact are surfaced here before approval.
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="text-sm font-bold font-heading">Forecast Attention</div>
+            <div className="mt-1 text-[11px] text-muted-foreground">
+              Guides with forecast-backed leave impact in {selectedMonthLabel} are surfaced here before approval.
+            </div>
+          </div>
+          <Link
+            to="/supervisor/approvals?type=Forecast"
+            className="inline-flex items-center justify-center rounded-xl border border-border bg-background px-4 py-2.5 text-xs font-semibold transition-colors hover:bg-muted/30"
+          >
+            Review Alerts
+          </Link>
         </div>
         <div className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-3">
-          {openForecastAlerts.slice(0, 3).map(alert => (
+          {selectedMonthForecastAlerts.slice(0, 3).map(alert => (
             <div key={alert.id} className="rounded-xl border border-warning/20 bg-warning/10 px-4 py-3 text-xs">
               <div className="font-semibold">{getUserName(alert.requesterId)}</div>
               <div className="mt-1 text-warning/90">
@@ -295,9 +346,9 @@ export default function SupervisorHome() {
               </div>
             </div>
           ))}
-          {openForecastAlerts.length === 0 && (
+          {selectedMonthForecastAlerts.length === 0 && (
             <div className="rounded-xl border border-border bg-background/80 px-4 py-6 text-xs text-center text-muted-foreground xl:col-span-3">
-              No forecast alerts are open for the current team view.
+              No forecast alerts are open for {selectedMonthLabel}.
             </div>
           )}
         </div>
@@ -307,7 +358,7 @@ export default function SupervisorHome() {
         <div className="mb-4 flex items-start justify-between gap-4">
           <h2 className="flex items-center gap-2 text-base font-bold font-heading">
             <Clock size={16} className="text-warning" /> Pending Leave Requests
-            <span className="ml-2 text-xs font-normal text-muted-foreground">{pending.length} requests need your action</span>
+            <span className="ml-2 text-xs font-normal text-muted-foreground">{pending.length} requests need your action in {selectedMonthLabel}</span>
           </h2>
           <Link to="/supervisor/approvals" className="flex items-center gap-1 text-xs font-bold text-primary hover:underline">
             View all <ChevronRight size={14} />
@@ -468,21 +519,30 @@ export default function SupervisorHome() {
               <Users size={15} className="text-info" /> Team Leave Summary
             </h2>
             <div className="mt-1 text-[11px] text-muted-foreground">
-              Sorted by highest production deficit and leave demand for {currentMonthLabel}.
+              Sorted by highest production deficit and leave demand for {selectedMonthLabel}.
             </div>
           </div>
           <Link to="/supervisor/team" className="text-[10px] font-bold text-primary hover:underline">View full team →</Link>
         </div>
         <div className="overflow-x-auto">
-          <table className="premium-table w-full text-sm">
+          <table className="premium-table w-full min-w-[1080px] table-fixed text-sm [&_th]:whitespace-normal [&_th]:leading-4">
+            <colgroup>
+              <col className="w-[18%]" />
+              <col className="w-[10%]" />
+              <col className="w-[10%]" />
+              <col className="w-[14%]" />
+              <col className="w-[10%]" />
+              <col className="w-[10%]" />
+              <col className="w-[28%]" />
+            </colgroup>
             <thead>
               <tr>
                 <th>Agent Name</th>
-                <th>Planned Leave</th>
-                <th>Unplanned Leave</th>
-                <th>Mandays</th>
-                <th>Approved Leave</th>
-                <th>Pending Leave</th>
+                <th className="text-center">Planned Leave</th>
+                <th className="text-center">Unplanned Leave</th>
+                <th className="text-center">Delivered Mandays</th>
+                <th className="text-center">Approved Leave</th>
+                <th className="text-center">Pending Leave</th>
                 <th>Production hours</th>
               </tr>
             </thead>
@@ -497,20 +557,20 @@ export default function SupervisorHome() {
                       <span className="font-semibold">{agent.name}</span>
                     </div>
                   </td>
-                  <td>{agent.planned}</td>
-                  <td>{agent.unplanned}</td>
-                  <td className="font-semibold text-success">{formatMandays(agent.mandays)}</td>
-                  <td>{agent.approvedLeaveCount}</td>
-                  <td>{agent.pending > 0 ? <span className="font-bold text-warning">{agent.pending}</span> : '0'}</td>
+                  <td className="text-center">{agent.planned}</td>
+                  <td className="text-center">{agent.unplanned}</td>
+                  <td className="text-center font-semibold text-success">{formatMandays(agent.mandays)}</td>
+                  <td className="text-center">{agent.approvedLeaveCount}</td>
+                  <td className="text-center">{agent.pending > 0 ? <span className="font-bold text-warning">{agent.pending}</span> : '0'}</td>
                   <td>
-                    <div className="min-w-[250px] space-y-2">
-                      <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-3 gap-2 text-[11px]">
                         <div className="rounded-lg border border-border bg-muted/20 p-2.5">
                           <div className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground">Delivered</div>
                           <div className="mt-1 font-semibold">{agent.achievedHours} hrs</div>
                         </div>
                         <div className="rounded-lg border border-border bg-muted/20 p-2.5">
-                          <div className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground">Planned</div>
+                          <div className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground">Target</div>
                           <div className="mt-1 font-semibold">{agent.targetHours} hrs</div>
                         </div>
                         <div className={`rounded-lg border p-2.5 ${
@@ -527,10 +587,10 @@ export default function SupervisorHome() {
                             {agent.deficitHours > 0 ? `${agent.deficitHours} hrs` : 'On plan'}
                           </div>
                         </div>
-                        <div className="rounded-lg border border-border bg-muted/20 p-2.5">
+                        {/* <div className="rounded-lg border border-border bg-muted/20 p-2.5">
                           <div className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground">Leaves</div>
                           <div className="mt-1 font-semibold">{agent.approvedLeaveCount} approved / {agent.requestCount} total</div>
-                        </div>
+                        </div> */}
                       </div>
                     </div>
                   </td>
