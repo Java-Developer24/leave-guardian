@@ -467,7 +467,7 @@ export default function AgentLeave() {
         </TabsContent>
 
         <TabsContent value="swap">
-          <div className="max-w-5xl">
+          <div className="w-full">
             <div className="bg-card border border-border rounded-xl p-6">
               <h2 className="text-base font-bold font-heading flex items-center gap-2">
                 <ArrowLeftRight size={18} className="text-info" /> Swap Leave Request

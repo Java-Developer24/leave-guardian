@@ -525,15 +525,15 @@ export default function SupervisorHome() {
           <Link to="/supervisor/team" className="text-[10px] font-bold text-primary hover:underline">View full team →</Link>
         </div>
         <div className="overflow-x-auto">
-          <table className="premium-table w-full min-w-[1080px] table-fixed text-sm [&_th]:whitespace-normal [&_th]:leading-4">
+          <table className="premium-table w-full min-w-[940px] table-fixed text-xs [&_th]:whitespace-normal [&_th]:leading-4 [&_th]:p-3 [&_td]:p-3">
             <colgroup>
-              <col className="w-[18%]" />
-              <col className="w-[10%]" />
-              <col className="w-[10%]" />
-              <col className="w-[14%]" />
-              <col className="w-[10%]" />
-              <col className="w-[10%]" />
-              <col className="w-[28%]" />
+              <col className="w-[17%]" />
+              <col className="w-[8%]" />
+              <col className="w-[8%]" />
+              <col className="w-[12%]" />
+              <col className="w-[9%]" />
+              <col className="w-[9%]" />
+              <col className="w-[37%]" />
             </colgroup>
             <thead>
               <tr>
@@ -564,16 +564,16 @@ export default function SupervisorHome() {
                   <td className="text-center">{agent.pending > 0 ? <span className="font-bold text-warning">{agent.pending}</span> : '0'}</td>
                   <td>
                     <div className="space-y-2">
-                      <div className="grid grid-cols-3 gap-2 text-[11px]">
-                        <div className="rounded-lg border border-border bg-muted/20 p-2.5">
+                      <div className="grid grid-cols-3 gap-1.5 text-[10px]">
+                        <div className="rounded-lg border border-border bg-muted/20 p-2">
                           <div className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground">Delivered</div>
                           <div className="mt-1 font-semibold">{agent.achievedHours} hrs</div>
                         </div>
-                        <div className="rounded-lg border border-border bg-muted/20 p-2.5">
+                        <div className="rounded-lg border border-border bg-muted/20 p-2">
                           <div className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground">Target</div>
                           <div className="mt-1 font-semibold">{agent.targetHours} hrs</div>
                         </div>
-                        <div className={`rounded-lg border p-2.5 ${
+                        <div className={`rounded-lg border p-2 ${
                           agent.deficitHours > 0
                             ? 'border-warning/20 bg-warning/10'
                             : 'border-success/20 bg-success/10'

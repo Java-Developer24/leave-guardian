@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
+const DESKTOP_SIDEBAR_STATE_KEY = 'app-shell-desktop-sidebar-collapsed';
+
 const navSections: Record<string, { label: string; items: { to: string; label: string; icon: typeof Home }[] }[]> = {
   agent: [
     { label: 'Overview', items: [
@@ -87,7 +89,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [desktopCollapsed, setDesktopCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem(DESKTOP_SIDEBAR_STATE_KEY) === 'true';
+  });
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -100,6 +105,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener('mousedown', handler);
   }, [userMenuOpen]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(DESKTOP_SIDEBAR_STATE_KEY, String(desktopCollapsed));
+  }, [desktopCollapsed]);
+
+  useEffect(() => {
+    setMobileOpen(false);
+    setUserMenuOpen(false);
+  }, [location.pathname]);
+
   if (!currentUser || location.pathname === '/' || location.pathname === '/login') return <>{children}</>;
 
   const sections = navSections[currentUser.role] ?? [];
@@ -110,7 +125,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     navigate('/login');
   };
 
-  const sidebarContent = (
+  const renderSidebarContent = ({ collapsed, mobile = false }: { collapsed: boolean; mobile?: boolean }) => (
     <div className="flex flex-col h-full">
       {/* Brand */}
       <div className="p-5 pb-4">
@@ -142,6 +157,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     key={item.to}
                     to={item.to}
                     onClick={() => setMobileOpen(false)}
+                    title={collapsed ? item.label : undefined}
                     className={`relative flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150
                       ${active
                         ? 'bg-primary/8 text-primary font-semibold'
@@ -183,17 +199,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] text-destructive hover:text-destructive hover:bg-destructive/5 rounded-xl transition-all duration-150 font-medium"
+            title={collapsed ? 'Sign Out' : undefined}
           >
             <Power size={16} />
             {!collapsed && <span>Sign Out</span>}
           </button>
 
           <button
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={() => setDesktopCollapsed(!desktopCollapsed)}
             className="hidden lg:flex items-center gap-2 px-3.5 py-2 text-[11px] text-muted-foreground/40 hover:text-muted-foreground transition-colors w-full rounded-lg hover:bg-muted/20"
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             <ChevronLeft size={14} className={`transition-transform duration-200 ${collapsed ? 'rotate-180' : ''}`} />
             {!collapsed && <span className="font-medium">Collapse</span>}
+            {collapsed && !mobile && <span className="sr-only">Expand</span>}
           </button>
           
         </div>
@@ -204,8 +224,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop sidebar */}
-      <aside className={`hidden lg:flex flex-col bg-background border-r border-border flex-shrink-0 transition-all duration-300 ${collapsed ? 'w-[72px]' : 'w-[250px]'}`}>
-        {sidebarContent}
+      <aside
+        className={`hidden lg:flex flex-col bg-background border-r border-border flex-shrink-0 transition-all duration-300 ${desktopCollapsed ? 'w-[72px]' : 'w-[250px]'}`}
+        aria-label="Sidebar"
+        aria-expanded={!desktopCollapsed}
+      >
+        {renderSidebarContent({ collapsed: desktopCollapsed })}
       </aside>
 
       {/* Mobile sidebar */}
@@ -229,19 +253,27 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <button onClick={() => setMobileOpen(false)} className="absolute top-4 right-4 p-2 rounded-lg hover:bg-muted/30 transition-colors z-10">
                 <X size={18} className="text-muted-foreground" />
               </button>
-              {sidebarContent}
+              {renderSidebarContent({ collapsed: false, mobile: true })}
             </motion.aside>
           </div>
         )}
       </AnimatePresence>
 
       {/* Main */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Header */}
         <header className="flex items-center justify-between px-5 lg:px-8 h-[60px] border-b border-border bg-background flex-shrink-0">
           <div className="flex items-center gap-3">
             <button onClick={() => setMobileOpen(true)} className="lg:hidden p-2 rounded-lg hover:bg-muted/30 transition-colors" aria-label="Open menu">
               <Menu size={20} />
+            </button>
+            <button
+              onClick={() => setDesktopCollapsed(!desktopCollapsed)}
+              className="hidden lg:flex p-2 rounded-lg hover:bg-muted/30 transition-colors text-muted-foreground"
+              aria-label={desktopCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={desktopCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              <ChevronLeft size={18} className={`transition-transform duration-200 ${desktopCollapsed ? 'rotate-180' : ''}`} />
             </button>
             <div className="hidden sm:flex items-center gap-2 text-sm">
               <span className="text-muted-foreground/50 font-medium">LSM</span>
@@ -300,8 +332,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-5 md:p-7 lg:p-8 scrollbar-hidden bg-surface/50">
-          {children}
+        <main className="flex-1 min-w-0 overflow-y-auto bg-surface/50 p-5 scrollbar-hidden md:p-7 lg:p-8">
+          <div className="min-w-0 w-full">
+            {children}
+          </div>
         </main>
       </div>
     </div>

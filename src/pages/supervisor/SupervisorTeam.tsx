@@ -6,27 +6,6 @@ import SectionHeader from '@/components/SectionHeader';
 import { AlertTriangle, Users, TrendingUp, CheckCircle, Clock, Search } from 'lucide-react';
 import { getMonthKey } from '@/core/utils/dates';
 
-function ProgressRing({ pct, size = 52 }: { pct: number; size?: number }) {
-  const r = (size - 10) / 2;
-  const circ = 2 * Math.PI * r;
-  const offset = circ - (Math.min(100, pct) / 100) * circ;
-  const color = pct >= 95 ? 'hsl(152, 69%, 42%)' : pct >= 80 ? 'hsl(35, 100%, 60%)' : 'hsl(0, 85%, 60%)';
-  return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full stat-ring">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="hsl(var(--secondary))" strokeWidth="4.5" />
-        <motion.circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth="4.5" strokeLinecap="round"
-          strokeDasharray={circ} strokeDashoffset={circ} animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 0.8, delay: 0.1, ease: [0.25, 0.1, 0.25, 1] }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-xs font-extrabold font-heading">{Math.round(pct)}%</span>
-      </div>
-    </div>
-  );
-}
-
 export default function SupervisorTeam() {
   const { users, leaves, currentUser } = useAppStore();
   const deptId = currentUser?.departmentId ?? 'd1';
@@ -36,7 +15,9 @@ export default function SupervisorTeam() {
   const nextMonthDate = useMemo(() => new Date(today.getFullYear(), today.getMonth() + 1, 1), [today]);
   const nextMonthKey = getMonthKey(nextMonthDate);
   const currentMonthLabel = today.toLocaleDateString('en-US', { month: 'long' });
-  const nextMonthLabel = nextMonthDate.toLocaleDateString('en-US', { month: 'long' });
+  const currentMonthYearLabel = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const nextMonthLabel = nextMonthDate.toLocaleDateString('en-US', { month: 'long',});
+    const nextMonthYearLabel = nextMonthDate.toLocaleDateString('en-US', { month: 'long',year: 'numeric' });
   const standardMandays = 25;
   const hoursTarget = standardMandays * 8;
 
@@ -101,8 +82,8 @@ export default function SupervisorTeam() {
           { value: teamMembers.filter(m => m.deficit === 0).length, label: 'On track for production', color: 'text-success', icon: CheckCircle },
           { value: teamMembers.filter(m => m.deficit >= 1 && m.deficit <= 16).length, label: 'At risk for production', color: 'text-warning', icon: AlertTriangle },
           
-          { value: teamMembers.reduce((s, m) => s + m.approved, 0), label: `Leaves taken in ${currentMonthLabel}`, color: 'text-foreground', icon: TrendingUp },
-          { value: teamMembers.reduce((s, m) => s + m.nextMonthPending, 0), label: `Pending leave requests for ${nextMonthLabel}`, color: 'text-info', icon: Clock },
+          { value: teamMembers.reduce((s, m) => s + m.approved, 0), label: `Leaves taken in current ${currentMonthYearLabel}`, color: 'text-foreground', icon: TrendingUp },
+          { value: teamMembers.reduce((s, m) => s + m.nextMonthPending, 0), label: `Pending leave requests for ${nextMonthYearLabel}`, color: 'text-info', icon: Clock },
         ].map(s => (
           <div key={s.label} className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-secondary/30 flex items-center justify-center border border-border/15">
@@ -125,7 +106,7 @@ export default function SupervisorTeam() {
       </div>
 
       {/* Agent Cards */}
-      <motion.div {...staggerContainer} initial="initial" animate="animate" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+      <motion.div {...staggerContainer} initial="initial" animate="animate" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
         {filtered.map(m => {
           const risk = getRiskLevel(m.deficit);
           return (
@@ -144,37 +125,38 @@ export default function SupervisorTeam() {
                 <span className={`text-[9px] px-2.5 py-1 rounded-full font-bold border ${risk.color}`}>{risk.label}</span>
               </div>
 
-              {/* Ring + Stats */}
-                <div className="flex items-center gap-4">
-                <ProgressRing pct={m.pct} />
-                <div className="grid grid-cols-3 gap-2 flex-1">
-                  {[
-                    { v: m.approved, l: `${currentMonthLabel} Taken`, c: 'text-foreground' },
-                    { v: m.nextMonthPending, l: `${nextMonthLabel} Pending`, c: 'text-warning' },
-                    { v: `${m.mandays}d`, l: 'Mandays Plan', c: 'text-success' },
-                  ].map(s => (
-                    <div key={s.l} className="text-center p-2 bg-card/50 rounded-lg border border-border/10">
-                      <div className={`text-base font-bold font-heading ${s.c}`}>{s.v}</div>
-                      <div className="text-[7px] text-muted-foreground/50 tracking-wider uppercase font-heading">{s.l}</div>
-                    </div>
-                  ))}
-                </div>
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { v: m.approved, l: `${currentMonthLabel} Leaves`, c: 'text-foreground' },
+                  { v: m.nextMonthPending, l: `${nextMonthLabel} Leaves`, c: 'text-warning' },
+                  { v: `${m.mandays}`, l: 'Mandays', c: 'text-success' },
+                ].map(s => (
+                  <div key={s.l} className="text-center p-2 bg-card/50 rounded-lg border border-border/10">
+                    <div className={`text-base font-bold font-heading ${s.c}`}>{s.v}</div>
+                    <div className="text-[7px] text-muted-foreground/50 tracking-wider uppercase font-heading">{s.l}</div>
+                  </div>
+                ))}
               </div>
 
               {/* Hours bar */}
               <div>
                 <div className="flex justify-between text-[10px] mb-1.5">
                   <span className="text-muted-foreground">Production Hours</span>
-                  <span className="font-bold">{m.hoursDelivered}<span className="text-muted-foreground/50 font-normal">/{m.hoursTarget}</span></span>
+                  <span className="font-bold">
+                    {m.hoursDelivered}
+                    <span className="text-muted-foreground/50 font-normal">/{m.hoursTarget}</span>
+                    <span className="text-muted-foreground/70 font-normal"> ({Math.round(m.pct)}%)</span>
+                  </span>
                 </div>
                 <div className="h-2 bg-secondary rounded-full overflow-hidden">
                   <motion.div initial={{ width: 0 }} animate={{ width: `${m.pct}%` }} transition={{ duration: 0.7, delay: 0.1 }} className="h-full accent-bar rounded-full" />
                 </div>
-                <div className="mt-2 text-[10px] text-muted-foreground">
+                {/* <div className="mt-2 text-[10px] text-muted-foreground">
                   {m.deficit >= 1
                     ? `Delivered ${m.hoursDelivered} of ${m.hoursTarget} planned production hours in ${currentMonthLabel}, short by ${m.deficit} hours after ${m.approvedDays} approved leave day${m.approvedDays === 1 ? '' : 's'}.`
                     : `Delivered the full ${m.hoursTarget} planned production hours in ${currentMonthLabel}.`}
-                </div>
+                </div> */}
               </div>
 
               {/* Deficit warning */}

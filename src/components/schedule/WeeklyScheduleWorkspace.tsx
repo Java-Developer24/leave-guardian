@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
+import type { WeekoffSwapRequest } from '@/core/entities';
 import { pageTransition } from '@/styles/motion';
 import { useAppStore } from '@/state/store';
 import SectionHeader from '@/components/SectionHeader';
@@ -12,6 +13,7 @@ import {
   getWeekoffResultSummary,
   getWeekoffScopeLabel,
 } from '@/core/utils/weekoff';
+import { getLeaveDisplayOwnerId, getPriorDateKey, validateWeekMoveRequest } from '@/core/utils/weekoffPlanner';
 import { showToast } from '@/components/toasts/ToastContainer';
 import { ArrowLeftRight, Building2, Filter, Send, Users } from 'lucide-react';
 
@@ -111,6 +113,21 @@ function formatRecurringWeekoff(pattern: ReturnType<typeof getRecurringWeekoffPa
   return `${pattern.label} • regular repeating week off`;
 }
 
+function formatLeaveStatusLabel(status: string) {
+  switch (status) {
+    case 'PendingSupervisor':
+      return 'Awaiting supervisor approval';
+    case 'PendingPeer':
+      return 'Awaiting peer approval';
+    default:
+      return status;
+  }
+}
+
+function formatExactShortDate(date: string) {
+  return new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
+}
+
 export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePersona }) {
   const {
     currentUser,
@@ -118,6 +135,7 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
     departments,
     schedule,
     leaves,
+    attendance,
     repo,
     weekoffSwapRequests,
     refreshWeekoffSwapRequests,
@@ -145,6 +163,7 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
   const [historyYear, setHistoryYear] = useState(today.getFullYear());
   const [historyMonth, setHistoryMonth] = useState(today.getMonth());
   const [historyGuideId, setHistoryGuideId] = useState('');
+  const [requestDetailView, setRequestDetailView] = useState<{ kind: 'history' | 'queue'; requestId: string } | null>(null);
 
   useEffect(() => {
     if (mode === 'supervisor') {
@@ -315,7 +334,7 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
 
       const weekLeaves = leaves
         .filter(leave =>
-          leave.requesterId === agent.id &&
+          getLeaveDisplayOwnerId(leave) === agent.id &&
           leave.date >= selectedWeekStart &&
           leave.date <= weekEndKey &&
           !['Rejected', 'Cancelled'].includes(leave.status),
@@ -371,13 +390,6 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
     () => peerGuideMonthRows.filter(row => row.weekOff).map(row => row.date),
     [peerGuideMonthRows],
   );
-  const selectedGuideWeekMoveTargets = useMemo(
-    () => (selectedGuideRow?.dayRows ?? [])
-      .filter(Boolean)
-      .filter(row => !row?.weekOff)
-      .map(row => row!.date),
-    [selectedGuideRow],
-  );
   const selectedGuideRecurringWeekoff = useMemo(
     () => getRecurringWeekoffPattern(selectedGuideMonthOffDates),
     [selectedGuideMonthOffDates],
@@ -410,6 +422,49 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
       .slice(0, 4);
   }, [guideHistoryRows, historyGuideId, approvedWeekoffRequests]);
   const visibleHistoryRows = guideHistoryRows.length > 0 ? guideHistoryRows : historyFallbackRows;
+  const selectedGuideWeekMoveOptions = useMemo(() => {
+    if (!selectedGuideRow?.agent.departmentId) return [];
+
+    return selectedGuideRow.weekOffDates.map(weekOffDate => {
+      const targetDate = getPriorDateKey(weekOffDate);
+
+      return {
+        sourceDate: weekOffDate,
+        date: targetDate,
+        ...validateWeekMoveRequest({
+          attendance,
+          departmentId: selectedGuideRow.agent.departmentId,
+          guideId: selectedGuideRow.agent.id,
+          leaves,
+          schedule,
+          sourceDate: weekOffDate,
+          targetDate,
+          users,
+          weekStart: selectedWeekStart,
+        }),
+      };
+    });
+  }, [selectedGuideRow, attendance, leaves, schedule, users, selectedWeekStart]);
+  const selectedGuideWeekMoveOption = useMemo(() => {
+    if (swapMode !== 'WeekMove' || !sourceDate) return null;
+    return selectedGuideWeekMoveOptions.find(option => option.sourceDate === sourceDate) ?? null;
+  }, [swapMode, selectedGuideWeekMoveOptions, sourceDate]);
+  const selectedGuideWeekMoveTargets = useMemo(() => {
+    if (swapMode !== 'WeekMove' || !sourceDate) return [];
+    return selectedGuideWeekMoveOptions.filter(option => option.sourceDate === sourceDate);
+  }, [swapMode, selectedGuideWeekMoveOptions, sourceDate]);
+  const selectedWeekMoveValidation = useMemo(() => {
+    if (swapMode !== 'WeekMove') return null;
+    return selectedGuideWeekMoveOption;
+  }, [swapMode, selectedGuideWeekMoveOption]);
+  const detailRequest = useMemo(() => {
+    if (!requestDetailView) return null;
+
+    const sourceRows = requestDetailView.kind === 'queue' ? pendingWeekoffQueue : visibleHistoryRows;
+    return sourceRows.find(request => request.id === requestDetailView.requestId)
+      ?? scopedWeekoffRequests.find(request => request.id === requestDetailView.requestId)
+      ?? null;
+  }, [requestDetailView, pendingWeekoffQueue, visibleHistoryRows, scopedWeekoffRequests]);
 
   useEffect(() => {
     if (!selectedGuideRow && selectedGuideMonthOffDates.length === 0) return;
@@ -420,15 +475,24 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
     }
 
     if (swapMode === 'WeekMove') {
-      const preferredSource = selectedGuideRow?.weekOffDates[0] ?? '';
-      const preferredTarget = selectedGuideWeekMoveTargets.find(date => date !== preferredSource) ?? selectedGuideWeekMoveTargets[0] ?? '';
-      setSourceDate(preferredSource);
-      setPeerDate(preferredTarget);
+      setSourceDate(selectedGuideRow?.weekOffDates[0] ?? '');
       return;
     }
 
     setSourceDate(selectedGuideRow?.weekOffDates[0] ?? '');
-  }, [selectedGuideRecurringWeekoff, selectedGuideRow, selectedGuideMonthOffDates, selectedGuideWeekMoveTargets, swapMode, swapScope]);
+  }, [selectedGuideRecurringWeekoff, selectedGuideRow, selectedGuideMonthOffDates, swapMode, swapScope]);
+
+  useEffect(() => {
+    if (swapScope !== 'Week' || swapMode !== 'WeekMove') return;
+
+    if (!selectedGuideWeekMoveOption?.allowed) {
+      setPeerDate('');
+      return;
+    }
+
+    if (peerDate === selectedGuideWeekMoveOption.date) return;
+    setPeerDate(selectedGuideWeekMoveOption.date);
+  }, [swapScope, swapMode, selectedGuideWeekMoveOption, peerDate]);
 
   useEffect(() => {
     if (swapScope === 'Month') {
@@ -466,6 +530,11 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
       return;
     }
 
+    if (swapMode === 'WeekMove' && !selectedWeekMoveValidation?.allowed) {
+      showToast(selectedWeekMoveValidation?.reason ?? 'Select a valid prior-day move in the same week', 'error');
+      return;
+    }
+
     setSubmitting(true);
     try {
       await repo.createWeekoffSwapRequest({
@@ -490,11 +559,90 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
       setComment('');
       setSwapScope('Week');
       setSwapMode('WeekSwap');
-    } catch {
-      showToast('Failed to submit week-off swap request', 'error');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Failed to submit week-off swap request', 'error');
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const renderWeekoffRequestDetail = (request: WeekoffSwapRequest, kind: 'history' | 'queue') => {
+    const isHistory = kind === 'history';
+
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60 font-heading">
+              {isHistory ? 'Guide Pair' : 'Pending Pair'}
+            </div>
+            <div className="mt-1 text-sm font-bold">{getUserName(request.sourceGuideId)}</div>
+            <div className="mt-1 text-[11px] text-muted-foreground">
+              {request.peerGuideId ? `Matched with ${getUserName(request.peerGuideId)}` : 'Single-guide week-off movement'}
+            </div>
+          </div>
+          <span className={`rounded-full border px-3 py-1 text-[10px] font-bold ${
+            isHistory
+              ? 'border-success/20 bg-success/10 text-success'
+              : 'border-warning/20 bg-warning/10 text-warning'
+          }`}>
+            {isHistory ? 'Approved' : 'Pending Admin'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 text-xs lg:grid-cols-4">
+          <div className="rounded-xl border border-border bg-background/80 p-3">
+            <div className="text-muted-foreground">Change Type</div>
+            <div className="mt-1 font-semibold">{getWeekoffModeLabel(request)}</div>
+          </div>
+          <div className="rounded-xl border border-border bg-background/80 p-3">
+            <div className="text-muted-foreground">Scope</div>
+            <div className="mt-1 font-semibold">{getWeekoffScopeLabel(request)}</div>
+          </div>
+          <div className="rounded-xl border border-border bg-background/80 p-3">
+            <div className="text-muted-foreground">{isHistory ? 'Requested On' : 'Submitted On'}</div>
+            <div className="mt-1 font-semibold">{formatDate(request.history[0]?.at ?? request.sourceDate)}</div>
+          </div>
+          <div className="rounded-xl border border-border bg-background/80 p-3">
+            <div className="text-muted-foreground">{isHistory ? 'Approved On' : 'Requested By'}</div>
+            <div className="mt-1 font-semibold">
+              {isHistory
+                ? formatDate(request.history[request.history.length - 1]?.at ?? request.sourceDate)
+                : getUserName(request.requesterId)}
+            </div>
+          </div>
+        </div>
+
+        <div className={`grid grid-cols-1 gap-3 ${isHistory ? '' : 'lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]'}`}>
+          <div className="rounded-xl border border-border bg-background/80 p-3 text-xs">
+            <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60 font-heading">
+              {isHistory ? 'Request Snapshot' : 'Request Details'}
+            </div>
+            <div className="mt-2 font-semibold">{getWeekoffRequestDescription(request, getUserName)}</div>
+            {request.comment ? (
+              <div className="mt-2 text-muted-foreground">Comment: {request.comment}</div>
+            ) : null}
+          </div>
+
+          {isHistory ? (
+            <div className="rounded-xl border border-border bg-background/80 p-3 text-xs">
+              <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60 font-heading">Approved Result</div>
+              <div className="mt-2 font-semibold">{getWeekoffResultSummary(request, getUserName)}</div>
+              <div className="mt-2 text-muted-foreground">
+                Applied tag: {getWeekoffModeLabel(request)} in {getWeekoffScopeLabel(request)}.
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-warning/20 bg-warning/10 p-3 text-xs">
+              <div className="text-[10px] uppercase tracking-[0.16em] text-warning/70 font-heading">Admin Review Focus</div>
+              <div className="mt-2 font-semibold">
+                Validate coverage for {request.periodType === 'Month' ? 'the repeating month pattern' : 'the selected week window'} before final approval.
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   const copy = headerCopy[mode];
@@ -702,14 +850,14 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-[1360px] w-full table-auto premium-table [&_th]:whitespace-nowrap [&_th]:p-4 [&_th]:text-[11px] [&_td]:align-top [&_td]:whitespace-normal [&_td]:p-4">
+            <table className="min-w-[1000px] w-full table-auto premium-table text-xs [&_th]:whitespace-nowrap [&_th]:p-2.5 [&_th]:text-[10px] [&_td]:align-top [&_td]:whitespace-normal [&_td]:p-2.5">
               <colgroup>
-                <col className={mode === 'supervisor' ? 'w-[220px]' : 'w-[240px]'} />
+                <col className={mode === 'supervisor' ? 'w-[172px]' : 'w-[190px]'} />
                 {weekDays.map(day => (
-                  <col key={toDateStr(day)} className="w-[140px]" />
+                  <col key={toDateStr(day)} className="w-[92px]" />
                 ))}
-                <col className={mode === 'supervisor' ? 'w-[260px]' : 'w-[280px]'} />
-                {mode === 'supervisor' && <col className="w-[160px]" />}
+                <col className={mode === 'supervisor' ? 'w-[150px]' : 'w-[165px]'} />
+                {mode === 'supervisor' && <col className="w-[100px]" />}
               </colgroup>
               <thead>
                 <tr>
@@ -750,6 +898,7 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
                         const weekoffTag = approvedWeekoffRequests
                           .map(request => getWeekoffAppliedTag(request, row.agent.id, cellDate))
                           .find(Boolean);
+                        const isTransferredLeave = dayLeave?.type === 'Transfer' && dayLeave.peerId === row.agent.id;
 
                         return (
                           <td key={`${row.agent.id}-${cellDate || index}`} className="align-top whitespace-normal">
@@ -757,8 +906,10 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
                               <span className="text-[11px] text-muted-foreground/50">NA</span>
                             ) : dayLeave ? (
                               <div className="rounded-xl border border-info/20 bg-info/10 px-2.5 py-2 text-[10px]">
-                                <div className="font-bold text-info">{dayLeave.type} Leave</div>
-                                <div className="mt-1 text-info/80">{dayLeave.status}</div>
+                                <div className="font-bold text-info">{isTransferredLeave ? 'Transferred Leave' : `${dayLeave.type} Leave`}</div>
+                                <div className="mt-1 text-info/80">
+                                  {isTransferredLeave ? `From ${getUserName(dayLeave.requesterId)}` : formatLeaveStatusLabel(dayLeave.status)}
+                                </div>
                               </div>
                             ) : dayRow.weekOff ? (
                               <div className={`rounded-xl border px-2.5 py-2 text-[10px] ${
@@ -804,7 +955,7 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
                             <span className="text-[11px] text-muted-foreground/60">No leave</span>
                           ) : row.weekLeaves.slice(0, 3).map(leave => (
                             <span key={leave.id} className="inline-flex rounded-full border border-info/15 bg-info/10 px-2.5 py-1 text-[10px] font-semibold text-info">
-                              {new Date(leave.date).toLocaleDateString('en-US', { day: '2-digit', month: 'short' })}
+                              {formatExactShortDate(leave.date)}
                             </span>
                           ))}
                           {row.weekLeaves.length > 3 && (
@@ -846,6 +997,74 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
         <div className="mt-6 rounded-xl border border-border bg-card overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
             <div>
+              <div className="flex items-center gap-2 text-sm font-bold font-heading">
+                <ArrowLeftRight size={15} className="text-primary" /> Week-Off Swap Queue
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                Pending week-off planning requests waiting for admin review.
+              </div>
+            </div>
+            <div className="rounded-xl border border-border bg-muted/20 px-4 py-2 text-right">
+              <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60 font-heading">Pending Requests</div>
+              <div className="text-sm font-semibold">{pendingWeekoffQueue.length}</div>
+            </div>
+          </div>
+
+          {pendingWeekoffQueue.length === 0 ? (
+            <div className="px-5 py-10 text-center text-sm text-muted-foreground">
+              No pending week-off planning requests in the current team scope.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-[860px] w-full premium-table text-xs [&_th]:whitespace-nowrap [&_th]:p-2.5 [&_th]:text-[10px] [&_td]:p-2.5 [&_td]:align-top">
+                <thead>
+                  <tr>
+                    <th>Guide</th>
+                    <th>Pair</th>
+                    <th>Change Type</th>
+                    <th>Scope</th>
+                    <th>Submitted On</th>
+                    <th>Requested By</th>
+                    <th>Status</th>
+                    <th>View</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingWeekoffQueue.map(request => (
+                    <tr key={`queue-row-${request.id}`}>
+                      <td className="font-semibold">{getUserName(request.sourceGuideId)}</td>
+                      <td>{request.peerGuideId ? getUserName(request.peerGuideId) : 'Single guide'}</td>
+                      <td>{getWeekoffModeLabel(request)}</td>
+                      <td>{getWeekoffScopeLabel(request)}</td>
+                      <td>{formatDate(request.history[0]?.at ?? request.sourceDate)}</td>
+                      <td>{getUserName(request.requesterId)}</td>
+                      <td>
+                        <span className="inline-flex rounded-full border border-warning/20 bg-warning/10 px-2.5 py-1 text-[10px] font-bold text-warning">
+                          Pending Admin
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() => setRequestDetailView({ kind: 'queue', requestId: request.id })}
+                          className="rounded-xl border border-border px-3 py-1.5 text-[11px] font-semibold transition-colors hover:bg-muted/30"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {mode === 'supervisor' && (
+        <div className="mt-6 rounded-xl border border-border bg-card overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
+            <div>
               <div className="text-sm font-bold font-heading">Week-Off Change History</div>
               <div className="text-[11px] text-muted-foreground">
                 Review month swaps, week moves, and week swaps for each guide across different months.
@@ -878,182 +1097,49 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
               No approved week-off changes found for this month and guide selection.
             </div>
           ) : (
-            <div className="space-y-4 px-5 py-5">
+            <div className="space-y-4">
               {historyFallbackRows.length > 0 ? (
-                <div className="rounded-xl border border-info/20 bg-info/10 px-4 py-3 text-xs text-info">
+                <div className="mx-5 mt-5 rounded-xl border border-info/20 bg-info/10 px-4 py-3 text-xs text-info">
                   No approved records were found for the exact month filter, so the latest approved week-off examples are shown below.
                 </div>
               ) : null}
-              <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-                <div className="rounded-xl border border-border bg-muted/20 p-3 text-xs">
-                  <div className="text-muted-foreground">Visible History Records</div>
-                  <div className="mt-1 text-lg font-black font-heading">{visibleHistoryRows.length}</div>
-                </div>
-                <div className="rounded-xl border border-border bg-muted/20 p-3 text-xs">
-                  <div className="text-muted-foreground">Selected Month</div>
-                  <div className="mt-1 text-sm font-semibold">{formatMonthYear(historyMonthKey)}</div>
-                </div>
-                <div className="rounded-xl border border-border bg-muted/20 p-3 text-xs">
-                  <div className="text-muted-foreground">Guide Filter</div>
-                  <div className="mt-1 text-sm font-semibold">{historyGuideId ? getUserName(historyGuideId) : 'All guides'}</div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-              {visibleHistoryRows.map(request => (
-                <div key={`history-row-${request.id}`} className="rounded-2xl border border-border bg-gradient-to-br from-muted/30 to-background p-4 shadow-sm">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60 font-heading">Guide Pair</div>
-                      <div className="mt-1 text-sm font-bold">{getUserName(request.sourceGuideId)}</div>
-                      <div className="mt-1 text-[11px] text-muted-foreground">
-                        {request.peerGuideId ? `Matched with ${getUserName(request.peerGuideId)}` : 'Single-guide week-off movement'}
-                      </div>
-                    </div>
-                    <span className="rounded-full border border-success/20 bg-success/10 px-3 py-1 text-[10px] font-bold text-success">
-                      Approved
-                    </span>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-2 gap-3 text-xs lg:grid-cols-4">
-                    <div className="rounded-xl border border-border bg-background/80 p-3">
-                      <div className="text-muted-foreground">Change Type</div>
-                      <div className="mt-1 font-semibold">{getWeekoffModeLabel(request)}</div>
-                    </div>
-                    <div className="rounded-xl border border-border bg-background/80 p-3">
-                      <div className="text-muted-foreground">Scope</div>
-                      <div className="mt-1 font-semibold">{getWeekoffScopeLabel(request)}</div>
-                    </div>
-                    <div className="rounded-xl border border-border bg-background/80 p-3">
-                      <div className="text-muted-foreground">Requested On</div>
-                      <div className="mt-1 font-semibold">{formatDate(request.history[0]?.at ?? request.sourceDate)}</div>
-                    </div>
-                    <div className="rounded-xl border border-border bg-background/80 p-3">
-                      <div className="text-muted-foreground">Approved On</div>
-                      <div className="mt-1 font-semibold">{formatDate(request.history[request.history.length - 1]?.at ?? request.sourceDate)}</div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-1 col-span-1 gap-3 ">
-                    <div className="rounded-xl border border-border bg-background/80 p-3 text-xs">
-                      <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60 font-heading">Approved Result</div>
-                      <div className="mt-2 font-semibold">{getWeekoffResultSummary(request, getUserName)}</div>
-                      {request.comment ? (
-                        <div className="mt-2 text-muted-foreground">Comment: {request.comment}</div>
-                      ) : null}
-                      <div className="mt-2 text-muted-foreground">
-                        Applied tag: {getWeekoffModeLabel(request)} in {getWeekoffScopeLabel(request)}.
-                      </div>
-                    </div>
-                    
-                    {/* <div className="rounded-xl border border-info/15 bg-info/8 p-3 text-xs">
-                      <div className="text-[10px] uppercase tracking-[0.16em] text-info/70 font-heading">Change Snapshot</div>
-                      <div className="mt-2 font-semibold">{getWeekoffRequestDescription(request, getUserName)}</div>
-                      <div className="mt-2 text-muted-foreground">
-                        Applied tag: {getWeekoffModeLabel(request)} in {getWeekoffScopeLabel(request)}.
-                      </div>
-                    </div> */}
-                  </div>
-                </div>
-              ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {mode === 'supervisor' && (
-        <div className="mt-6 rounded-xl border border-border bg-card overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
-            <div>
-              <div className="flex items-center gap-2 text-sm font-bold font-heading">
-                <ArrowLeftRight size={15} className="text-primary" /> Week-Off Swap Queue
-              </div>
-              <div className="text-[11px] text-muted-foreground">
-                Pending week-off planning requests waiting for admin review.
-              </div>
-            </div>
-            <div className="rounded-xl border border-border bg-muted/20 px-4 py-2 text-right">
-              <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60 font-heading">Pending Requests</div>
-              <div className="text-sm font-semibold">{pendingWeekoffQueue.length}</div>
-            </div>
-          </div>
-
-          {pendingWeekoffQueue.length === 0 ? (
-            <div className="px-5 py-10 text-center text-sm text-muted-foreground">
-              No pending week-off planning requests in the current team scope.
-            </div>
-          ) : (
-            <div className="space-y-4 px-5 py-5">
-              <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-                <div className="rounded-xl border border-border bg-muted/20 p-3 text-xs">
-                  <div className="text-muted-foreground">Queue Items</div>
-                  <div className="mt-1 text-lg font-black font-heading">{pendingWeekoffQueue.length}</div>
-                </div>
-                <div className="rounded-xl border border-border bg-muted/20 p-3 text-xs">
-                  <div className="text-muted-foreground">Month In View</div>
-                  <div className="mt-1 text-sm font-semibold">{formatMonthYear(visibleMonthKey)}</div>
-                </div>
-                <div className="rounded-xl border border-border bg-muted/20 p-3 text-xs">
-                  <div className="text-muted-foreground">Request Type Mix</div>
-                  <div className="mt-1 text-sm font-semibold">
-                    {Array.from(new Set(pendingWeekoffQueue.map(request => getWeekoffModeLabel(request)))).join(' • ')}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-              {pendingWeekoffQueue.map(request => (
-                <div key={`queue-row-${request.id}`} className="rounded-2xl border border-border bg-gradient-to-br from-warning/8 to-background p-4 shadow-sm">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60 font-heading">Pending Pair</div>
-                      <div className="mt-1 text-sm font-bold">{getUserName(request.sourceGuideId)}</div>
-                      <div className="mt-1 text-[11px] text-muted-foreground">
-                        {request.peerGuideId ? `Requested with ${getUserName(request.peerGuideId)}` : 'Single-guide change'}
-                      </div>
-                    </div>
-                    <span className="rounded-full border border-warning/20 bg-warning/10 px-3 py-1 text-[10px] font-bold text-warning">
-                      Pending Admin
-                    </span>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-2 gap-3 text-xs lg:grid-cols-4">
-                    <div className="rounded-xl border border-border bg-background/80 p-3">
-                      <div className="text-muted-foreground">Change Type</div>
-                      <div className="mt-1 font-semibold">{getWeekoffModeLabel(request)}</div>
-                    </div>
-                    <div className="rounded-xl border border-border bg-background/80 p-3">
-                      <div className="text-muted-foreground">Scope</div>
-                      <div className="mt-1 font-semibold">{getWeekoffScopeLabel(request)}</div>
-                    </div>
-                    <div className="rounded-xl border border-border bg-background/80 p-3">
-                      <div className="text-muted-foreground">Submitted On</div>
-                      <div className="mt-1 font-semibold">{formatDate(request.history[0]?.at ?? request.sourceDate)}</div>
-                    </div>
-                    <div className="rounded-xl border border-border bg-background/80 p-3">
-                      <div className="text-muted-foreground">Requested By</div>
-                      <div className="mt-1 font-semibold">{getUserName(request.requesterId)}</div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-                    <div className="rounded-xl border border-border bg-background/80 p-3 text-xs">
-                      <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60 font-heading">Request Details</div>
-                      <div className="mt-2 font-semibold">{getWeekoffRequestDescription(request, getUserName)}</div>
-                      {request.comment ? (
-                        <div className="mt-2 text-muted-foreground">Comment: {request.comment}</div>
-                      ) : null}
-                    </div>
-                    <div className="rounded-xl border border-warning/20 bg-warning/10 p-3 text-xs">
-                      <div className="text-[10px] uppercase tracking-[0.16em] text-warning/70 font-heading">Admin Review Focus</div>
-                      <div className="mt-2 font-semibold">
-                        Validate coverage for {request.periodType === 'Month' ? 'the repeating month pattern' : 'the selected week window'} before final approval.
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+              <div className="overflow-x-auto">
+                <table className="min-w-[920px] w-full premium-table text-xs [&_th]:whitespace-nowrap [&_th]:p-2.5 [&_th]:text-[10px] [&_td]:p-2.5 [&_td]:align-top">
+                  <thead>
+                    <tr>
+                      <th>Guide</th>
+                      <th>Pair</th>
+                      <th>Change Type</th>
+                      <th>Scope</th>
+                      <th>Requested On</th>
+                      <th>Approved On</th>
+                      <th>Result</th>
+                      <th>View</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleHistoryRows.map(request => (
+                      <tr key={`history-row-${request.id}`}>
+                        <td className="font-semibold">{getUserName(request.sourceGuideId)}</td>
+                        <td>{request.peerGuideId ? getUserName(request.peerGuideId) : 'Single guide'}</td>
+                        <td>{getWeekoffModeLabel(request)}</td>
+                        <td>{getWeekoffScopeLabel(request)}</td>
+                        <td>{formatDate(request.history[0]?.at ?? request.sourceDate)}</td>
+                        <td>{formatDate(request.history[request.history.length - 1]?.at ?? request.sourceDate)}</td>
+                        <td className="max-w-[240px] text-[11px] text-muted-foreground">{getWeekoffResultSummary(request, getUserName)}</td>
+                        <td>
+                          <button
+                            type="button"
+                            onClick={() => setRequestDetailView({ kind: 'history', requestId: request.id })}
+                            className="rounded-xl border border-border px-3 py-1.5 text-[11px] font-semibold transition-colors hover:bg-muted/30"
+                          >
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
@@ -1127,7 +1213,10 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
                         <button
                           key={`modal-week-${key}`}
                           type="button"
-                          onClick={() => setSelectedWeekStart(key)}
+                          onClick={() => {
+                            setSelectedWeekStart(key);
+                            setPeerDate('');
+                          }}
                           className={`rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
                             selectedWeekStart === key
                               ? 'border border-info/20 bg-info/12 text-info'
@@ -1139,6 +1228,11 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
                       );
                     })}
                   </div>
+                  {swapMode === 'WeekMove' ? (
+                    <div className="mt-2 rounded-xl border border-info/20 bg-info/10 px-4 py-3 text-xs text-info">
+                      Pick any visible week first, then choose the current week off on the left and the valid same-week prior day on the right.
+                    </div>
+                  ) : null}
                 </div>
               )}
 
@@ -1157,7 +1251,7 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
                       {
                         id: 'WeekMove',
                         label: 'Move week off',
-                        description: 'Move one guide week off within the selected week. Pending with validation.',
+                        description: 'Move one guide week off within the selected week.',
                       },
                       {
                         id: 'WeekSwap',
@@ -1170,7 +1264,10 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
                       type="button"
                       onClick={() => {
                         setSwapMode(option.id as 'MonthSwap' | 'WeekMove' | 'WeekSwap');
-                        if (option.id === 'WeekMove') setPeerGuideId('');
+                        if (option.id === 'WeekMove') {
+                          setPeerGuideId('');
+                          setPeerDate('');
+                        }
                       }}
                       className={`rounded-xl border px-4 py-3 text-left transition-colors ${
                         swapMode === option.id
@@ -1206,14 +1303,16 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
 
               {swapMode === 'WeekMove' && (
                 <div className="rounded-xl border border-info/20 bg-info/10 px-4 py-3 text-xs text-info">
-                  Validation note: this move keeps the request on the same guide and will still go to admin for review before the schedule changes.
+                  Validation note: this move stays on the same guide, only shifts to the immediately previous day in the same week, and still checks coverage plus the 7-day login/work rule before it can be submitted.
                 </div>
               )}
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-3">
                   <div className="text-xs font-semibold">
-                    {selectedGuideRow.agent.name} {swapScope === 'Month' ? 'Regular Week Off' : 'Week Off'}
+                    {swapMode === 'WeekMove'
+                      ? `${selectedGuideRow.agent.name} Current Week Off`
+                      : `${selectedGuideRow.agent.name} ${swapScope === 'Month' ? 'Regular Week Off' : 'Week Off'}`}
                   </div>
                   {swapScope === 'Month' ? (
                     !selectedGuideRecurringWeekoff ? (
@@ -1261,27 +1360,41 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
                 <div className="space-y-3">
                   <div className="text-xs font-semibold">
                     {swapMode === 'WeekMove'
-                      ? `${selectedGuideRow.agent.name} New Week Off`
+                      ? 'Available Day In Selected Week'
                       : `${peerGuideId ? getUserName(peerGuideId) : 'Peer'} ${swapScope === 'Month' ? 'Regular Week Off' : 'Week Off'}`}
                   </div>
                   {swapMode === 'WeekMove' ? (
-                    selectedGuideWeekMoveTargets.length === 0 ? (
+                    !sourceDate ? (
                       <div className="rounded-xl border border-border bg-muted/20 px-4 py-5 text-center text-xs text-muted-foreground">
-                        No alternate workday is available in this week.
+                        Select a current week-off day to view the available day for that week.
+                      </div>
+                    ) : selectedGuideWeekMoveTargets.length === 0 ? (
+                      <div className="rounded-xl border border-border bg-muted/20 px-4 py-5 text-center text-xs text-muted-foreground">
+                        {selectedGuideWeekMoveOption?.reason ?? 'No available prior-day move was found for this week-off selection.'}
                       </div>
                     ) : (
-                      selectedGuideWeekMoveTargets.map(date => (
+                      selectedGuideWeekMoveTargets.map(option => (
                         <button
-                          key={`target-${date}`}
+                          key={`move-target-${option.sourceDate}-${option.date}`}
                           type="button"
-                          onClick={() => setPeerDate(date)}
+                          onClick={() => {
+                            if (option.allowed) {
+                              setPeerDate(option.date);
+                            }
+                          }}
+                          disabled={!option.allowed}
                           className={`w-full rounded-xl border px-3 py-3 text-left text-xs transition-colors ${
-                            peerDate === date
+                            peerDate === option.date
                               ? 'border-info/25 bg-info/8 text-info'
-                              : 'border-border bg-background hover:bg-muted/30'
+                              : option.allowed
+                                ? 'border-border bg-background hover:bg-muted/30'
+                                : 'border-border bg-muted/30 text-muted-foreground/70'
                           }`}
                         >
-                          {formatWeekdayWithDate(date)}
+                          <div className="font-semibold">{formatWeekdayWithDate(option.date)}</div>
+                          <div className="mt-1 text-[11px] opacity-80">
+                            {option.allowed ? 'Available day in the selected week' : (option.reason ?? 'This move is not available for the selected week-off day.')}
+                          </div>
                         </button>
                       ))
                     )
@@ -1353,6 +1466,11 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
                 <div className="mt-2 text-xs text-muted-foreground">
                   Admin approval is still required before the updated week-off pattern appears in the published schedule.
                 </div>
+                {swapMode === 'WeekMove' && selectedWeekMoveValidation && !selectedWeekMoveValidation.allowed ? (
+                  <div className="mt-2 text-xs text-warning">
+                    {selectedWeekMoveValidation.reason}
+                  </div>
+                ) : null}
               </div>
 
               <div>
@@ -1379,7 +1497,13 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
                 </button>
                 <button
                   onClick={handleSubmitSwap}
-                  disabled={submitting || !sourceDate || !peerDate || ((swapScope === 'Month' || swapMode === 'WeekSwap') && !peerGuideId)}
+                  disabled={
+                    submitting ||
+                    !sourceDate ||
+                    !peerDate ||
+                    ((swapScope === 'Month' || swapMode === 'WeekSwap') && !peerGuideId) ||
+                    (swapMode === 'WeekMove' && !selectedWeekMoveValidation?.allowed)
+                  }
                   className="flex items-center gap-2 rounded-xl btn-primary-gradient px-5 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-40"
                 >
                   <Send size={14} /> {submitting ? 'Sending...' : 'Send for Admin Approval'}
@@ -1387,6 +1511,16 @@ export default function WeeklyScheduleWorkspace({ mode }: { mode: SchedulePerson
               </div>
             </div>
           )}
+        </Modal>
+      )}
+
+      {mode === 'supervisor' && (
+        <Modal
+          open={!!detailRequest && !!requestDetailView}
+          onClose={() => setRequestDetailView(null)}
+          title={requestDetailView?.kind === 'queue' ? 'Week-Off Swap Queue Details' : 'Week-Off Change History Details'}
+        >
+          {detailRequest && requestDetailView ? renderWeekoffRequestDetail(detailRequest, requestDetailView.kind) : null}
         </Modal>
       )}
     </motion.div>

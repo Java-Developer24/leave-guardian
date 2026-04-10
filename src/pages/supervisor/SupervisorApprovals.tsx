@@ -221,6 +221,8 @@ export default function SupervisorApprovals() {
   );
   const selectedTransferGuideLeave = transferGuideAvailability.find(leave => leave.id === transferGuideLeaveId);
   const selectedTransferBuddyLeave = transferBuddyAvailability.find(leave => leave.id === transferBuddyLeaveId);
+  const selectedTransferGuideName = transferGuideId ? getUserName(transferGuideId) : 'the selected guide';
+  const selectedTransferBuddyName = transferBuddyId ? getUserName(transferBuddyId) : 'the selected buddy';
   const transferGuideSnapshot = useMemo(
     () => transferGuideId ? getTransferGuideSnapshot(transferGuideId, transferMonthKey) : null,
     [transferGuideId, transferMonthKey, leaves],
@@ -403,15 +405,6 @@ export default function SupervisorApprovals() {
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        {timer ? (
-                          <span className={`rounded-full border px-3 py-1 text-[10px] font-bold ${
-                            timer.overdue
-                              ? 'border-destructive/20 bg-destructive/10 text-destructive'
-                              : 'border-warning/20 bg-warning/10 text-warning'
-                          }`}>
-                            {timer.text}
-                          </span>
-                        ) : null}
                         <StatusChip status={leave.status} />
                       </div>
                     </div>
@@ -748,18 +741,28 @@ export default function SupervisorApprovals() {
                       <div className="text-muted-foreground">Guide</div>
                       <div className="mt-1 font-semibold">{transferGuideId ? getUserName(transferGuideId) : 'Select a guide'}</div>
                       <div className="mt-1 text-[11px] text-muted-foreground">
-                        {selectedTransferGuideLeave ? `Selected leave date ${formatDate(selectedTransferGuideLeave.date)}` : 'Pick one leave date from the guide inventory'}
+                        {selectedTransferGuideLeave ? `Current leave date ${formatDate(selectedTransferGuideLeave.date)}` : 'Pick one leave date from the guide inventory'}
+                      </div>
+                      <div className="mt-1 text-[11px] text-muted-foreground">
+                        {selectedTransferGuideLeave && transferBuddyId
+                          ? `${formatDate(selectedTransferGuideLeave.date)} will be removed from ${selectedTransferGuideName} and transferred to ${selectedTransferBuddyName}.`
+                          : 'Final transfer output will appear after the guide leave and transfer buddy are selected'}
                       </div>
                     </div>
                     <div className="rounded-xl border border-border bg-muted/20 p-3">
                       <div className="text-muted-foreground">Transfer Buddy</div>
                       <div className="mt-1 font-semibold">{transferBuddyId ? getUserName(transferBuddyId) : 'Select a buddy'}</div>
                       <div className="mt-1 text-[11px] text-muted-foreground">
-                        {selectedTransferBuddyLeave ? `Selected leave date ${formatDate(selectedTransferBuddyLeave.date)}` : 'Pick one matching leave date from the buddy inventory'}
+                        {selectedTransferBuddyLeave ? `Current leave date ${formatDate(selectedTransferBuddyLeave.date)}` : 'Pick one matching leave date from the buddy inventory'}
+                      </div>
+                      <div className="mt-1 text-[11px] text-muted-foreground">
+                        {selectedTransferGuideLeave && transferBuddyId
+                          ? `${selectedTransferBuddyName} will receive the transferred leave on ${formatDate(selectedTransferGuideLeave.date)} from ${selectedTransferGuideName}.`
+                          : 'Received transfer date will appear after the guide leave and transfer buddy are selected'}
                       </div>
                     </div>
                     <div className="rounded-xl border border-info/20 bg-info/10 px-4 py-3 text-xs text-info">
-                      The transfer will be created by the supervisor and moved into the approval queue for final confirmation.
+                      After approval, the selected leave will be removed from the current guide and assigned to the selected transfer buddy and also notified to WFM team.
                     </div>
                   </div>
                 </div>
@@ -791,7 +794,7 @@ export default function SupervisorApprovals() {
           <div className="mb-5 rounded-xl border border-info/20 bg-info/10 px-4 py-3 text-xs text-info">
             Forecast volumes, scheduled guides, required guides, and shrinkage impact in this tab are calculated at the department level only.
           </div>
-          <div className="mb-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
+          <div className="mb-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
             <div className="rounded-xl border border-border bg-card p-5">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/15 bg-primary/10">
@@ -814,7 +817,7 @@ export default function SupervisorApprovals() {
                 </div>
               </div>
             </div>
-            <div className="rounded-xl border border-border bg-card p-5">
+            {/* <div className="rounded-xl border border-border bg-card p-5">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-info/15 bg-info/10">
                   <BarChart3 size={16} className="text-info" />
@@ -826,7 +829,7 @@ export default function SupervisorApprovals() {
                   <div className="text-[10px] text-muted-foreground">Peak forecast volume</div>
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
 
           {openForecastAlerts.length === 0 ? (

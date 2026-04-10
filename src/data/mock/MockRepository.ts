@@ -24,6 +24,7 @@ import {
   seedWeekoffSwapRequests,
 } from '@/data/seeds';
 import { buildForecastAlert, buildLeaveSubmissionPreview } from '@/core/utils/forecast';
+import { validateWeekMoveRequest } from '@/core/utils/weekoffPlanner';
 
 const delay = (ms = 200) => new Promise(r => setTimeout(r, ms));
 let idCounter = 100;
@@ -138,6 +139,10 @@ class MockRepository implements IRepo {
   }
 
   async createWeekoffSwapRequest(payload: Omit<WeekoffSwapRequest, 'id' | 'status' | 'history'> & { comment?: string }) {
+    if ((payload.mode ?? 'WeekSwap') === 'WeekMove') {
+      this.assertWeekMoveRequest(payload);
+    }
+
     await delay();
     const submittedAt = new Date().toISOString();
     const request: WeekoffSwapRequest = {
@@ -153,6 +158,9 @@ class MockRepository implements IRepo {
   async approveWeekoffSwapRequest(id: string, by: string, note?: string) {
     const request = this.weekoffSwapRequests.find(item => item.id === id);
     if (!request) throw new Error('Week-off swap request not found');
+    if ((request.mode ?? 'WeekSwap') === 'WeekMove') {
+      this.assertWeekMoveRequest(request);
+    }
     request.status = 'Approved';
     request.history.push({ at: new Date().toISOString(), by, action: 'Approved', note });
     this.applyWeekoffSwapToSchedule(request);
@@ -227,6 +235,26 @@ class MockRepository implements IRepo {
   private markForecastAlertReviewed(leaveId: string) {
     const alert = this.forecastAlerts.find(item => item.leaveId === leaveId);
     if (alert) alert.status = 'Reviewed';
+  }
+
+  private assertWeekMoveRequest(
+    payload: Pick<WeekoffSwapRequest, 'departmentId' | 'sourceGuideId' | 'sourceDate' | 'peerDate' | 'weekStart'>,
+  ) {
+    const validation = validateWeekMoveRequest({
+      attendance: this.attendance,
+      departmentId: payload.departmentId,
+      guideId: payload.sourceGuideId,
+      leaves: this.leaves,
+      schedule: this.schedule,
+      sourceDate: payload.sourceDate,
+      targetDate: payload.peerDate,
+      users: this.users,
+      weekStart: payload.weekStart,
+    });
+
+    if (!validation.allowed) {
+      throw new Error(validation.reason ?? 'Invalid week-off move request');
+    }
   }
 
   private applyWeekoffSwapToSchedule(request: WeekoffSwapRequest) {
