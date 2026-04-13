@@ -798,7 +798,7 @@ export default function SupervisorAnalytics() {
               Choose the active month here, then decide whether the page should show a single month, a 3-month window, a 6-month window, or a custom date range.
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          {/* <div className="flex items-center gap-2">
             <button
               onClick={() => handleMonthStep(-1)}
               className="rounded-xl border border-border p-2 transition-colors hover:bg-muted/30"
@@ -819,7 +819,7 @@ export default function SupervisorAnalytics() {
             >
               <ChevronRight size={14} />
             </button>
-          </div>
+          </div> */}
         </div>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
@@ -876,7 +876,7 @@ export default function SupervisorAnalytics() {
         className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5"
       >
         <motion.div variants={staggerItem}>
-          <KpiCard label="Forecast Accuracy" value="94.3%" icon={<Target size={18} />} accent="success" subtitle="Department forecast model health" />
+          <KpiCard label="Forecast Accuracy" value="94.3%" icon={<Target size={18} />} accent="success" subtitle="Forecasted shrinkage%" />
         </motion.div>
         <motion.div variants={staggerItem}>
           <KpiCard
@@ -899,19 +899,19 @@ export default function SupervisorAnalytics() {
         <motion.div variants={staggerItem}>
           <KpiCard
             label="High Risk Days"
-            value={highRiskRows.length}
+            value={`${highRiskRows.length}d`}
             icon={<AlertTriangle size={18} />}
             accent="warning"
-            subtitle={`${selectedMonthLabel} is the current default month`}
+            subtitle={`For ${selectedMonthLabel} `}
           />
         </motion.div>
         <motion.div variants={staggerItem}>
           <KpiCard
-            label="Planned Leaves"
-            value={plannedLeaveCount}
+            label="Total Leaves"
+            value={`${plannedLeaveCount + unplannedLeaveCount}`}
             icon={<TrendingUp size={18} />}
             accent="primary"
-            subtitle={`${unplannedLeaveCount} unplanned leave day(s) in the same month`}
+            subtitle={`PL- ${plannedLeaveCount} • UL- ${unplannedLeaveCount}`}
           />
         </motion.div>
       </motion.div>
@@ -1396,16 +1396,16 @@ export default function SupervisorAnalytics() {
                 {item ? (
                   <div className="mt-2 space-y-1 text-[9px]">
                     <div className={`rounded-lg border px-2 py-1 ${performanceMetricClass}`}>
-                      Shrinkage <span className="font-semibold">{item.shrinkagePct}%</span>
+                      Shrinkage : <span className="font-semibold">{item.shrinkagePct}%</span>
                     </div>
                     <div className={`rounded-lg border px-2 py-1 ${performanceMetricClass}`}>
-                      Forecast <span className="font-semibold">{item.forecastVolume}</span>
+                      Forecast Volumes : <span className="font-semibold">{item.forecastVolume}</span>
                     </div>
                     <div className={`rounded-lg border px-2 py-1 ${performanceMetricClass}`}>
-                      Scheduled <span className="font-semibold">{item.scheduledGuides}</span>
+                      Scheduled : <span className="font-semibold">{item.scheduledGuides}</span>
                     </div>
                     <div className={`rounded-lg border px-2 py-1 ${performanceMetricClass}`}>
-                      Required <span className="font-semibold">{item.requiredGuides}</span>
+                      Required : <span className="font-semibold">{item.requiredGuides}</span>
                     </div>
                   </div>
                 ) : (
