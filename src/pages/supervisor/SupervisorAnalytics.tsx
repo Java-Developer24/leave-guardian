@@ -856,7 +856,7 @@ export default function SupervisorAnalytics() {
               className="glass-input text-sm disabled:cursor-not-allowed disabled:opacity-70"
             />
           </div>
-          <div>
+          {/* <div>
             <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Months Included</label>
             <div className="flex min-h-[42px] flex-wrap gap-2 rounded-xl border border-border bg-muted/20 px-3 py-2">
               {selectedRangeMonths.map(month => (
@@ -865,7 +865,7 @@ export default function SupervisorAnalytics() {
                 </span>
               ))}
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
 
@@ -998,7 +998,7 @@ export default function SupervisorAnalytics() {
                   {item ? (
                     <div className="mt-1.5 space-y-1 text-[7px] leading-tight">
                       <div className={`rounded-md border px-1.5 py-1 ${metricCardClass}`}>
-                        <div className={subtleTextClass}>Forecast</div>
+                        <div className={subtleTextClass}>Forecast Shrinkage %</div>
                         <div className="mt-0.5 text-[10px] font-black">{item.forecastedShrinkagePct}%</div>
                       </div>
                       <div className={`rounded-md border px-1.5 py-1 ${metricCardClass}`}>
@@ -1008,17 +1008,17 @@ export default function SupervisorAnalytics() {
                             <span className="font-semibold">{item.plannedLeaves}</span>
                           </div>
                           <div className="flex items-center justify-between gap-1">
-                            <span className={subtleTextClass}>UP</span>
+                            <span className={subtleTextClass}>UPL</span>
                             <span className="font-semibold">{item.unplannedLeaves}</span>
                           </div>
-                          <div className="flex items-center justify-between gap-1">
+                          {/* <div className="flex items-center justify-between gap-1">
                             <span className={subtleTextClass}>Swap</span>
                             <span className="font-semibold">{item.weekoffSwapCount}</span>
                           </div>
                           <div className="flex items-center justify-between gap-1">
                             <span className={subtleTextClass}>Move</span>
                             <span className="font-semibold">{item.weekoffMoveCount}</span>
-                          </div>
+                          </div> */}
                         </div>
                       </div>
                     </div>
@@ -1034,9 +1034,8 @@ export default function SupervisorAnalytics() {
             
             <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-500" /> High risk</span>
                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-700" />PL-Planned Leave</span>
-            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-sky-500" />UL- Unplanned leaves</span>
-            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-500" />Swap- Week-Off Swap</span>
-            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-sky-500" />Move- Week-Off Move</span>
+            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-sky-500" />UPL- Unplanned leaves</span>
+
 
           </div>
         </div>
@@ -1396,17 +1395,18 @@ export default function SupervisorAnalytics() {
                 {item ? (
                   <div className="mt-2 space-y-1 text-[9px]">
                     <div className={`rounded-lg border px-2 py-1 ${performanceMetricClass}`}>
-                      Shrinkage : <span className="font-semibold">{item.shrinkagePct}%</span>
+                      Shrinkage % : <span className="font-semibold">{item.shrinkagePct}%</span>
                     </div>
                     <div className={`rounded-lg border px-2 py-1 ${performanceMetricClass}`}>
                       Forecast Volumes : <span className="font-semibold">{item.forecastVolume}</span>
                     </div>
                     <div className={`rounded-lg border px-2 py-1 ${performanceMetricClass}`}>
-                      Scheduled : <span className="font-semibold">{item.scheduledGuides}</span>
+                      Required Guides : <span className="font-semibold">{item.requiredGuides}</span>
                     </div>
                     <div className={`rounded-lg border px-2 py-1 ${performanceMetricClass}`}>
-                      Required : <span className="font-semibold">{item.requiredGuides}</span>
+                      Scheduled Guides : <span className="font-semibold">{item.scheduledGuides}</span>
                     </div>
+                    
                   </div>
                 ) : (
                   <div className="mt-6 text-[10px] text-muted-foreground/50">No team data</div>
