@@ -13,7 +13,7 @@ import type {
 
 // ─── Departments ─────────────────────────────────────────────
 export const seedDepartments: Department[] = [
-  { id: "d1", name: "Messaging - Account Support", monthlyLeaveCap: 12 },
+  { id: "d1", name: "Messaging - Account ", monthlyLeaveCap: 12 },
   { id: "d2", name: "Messaging - Email Support", monthlyLeaveCap: 10 },
   { id: "d3", name: "Messaging - General", monthlyLeaveCap: 11 },
   { id: "d4", name: "Messaging - Hosting", monthlyLeaveCap: 10 },

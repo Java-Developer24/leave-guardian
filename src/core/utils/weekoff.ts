@@ -44,11 +44,11 @@ export function getWeekoffResultSummary(
 
   switch (request.mode ?? 'WeekSwap') {
     case 'MonthSwap':
-      return `Week off approved for ${sourceGuide} with ${peerGuide ?? 'the paired guide'} for the entire month.`;
+      return `Week off Swap approved for ${sourceGuide} Saturday, Sunday weekoff with ${peerGuide ?? 'the paired guide'} Thursday, Friday week off for the entire month.`;
     case 'WeekMove':
-      return `Week off approved only for ${sourceGuide} by moving the off day from ${formatDate(request.sourceDate)} to ${formatDate(request.peerDate)}.`;
+      return `Week off Move approved only for ${sourceGuide} by moving the off day from ${formatDate(request.sourceDate)} Friday to ${formatDate(request.peerDate)} Thursday.`;
     default:
-      return `Week off approved for ${sourceGuide} with ${peerGuide ?? 'the paired guide'} in the current week.`;
+      return `Week off Swap approved for ${sourceGuide}  Thursday, Friday weekoff with ${peerGuide ?? 'the paired guide'}   Saturday, Sunday weekoff  in the current week.`;
   }
 }
 

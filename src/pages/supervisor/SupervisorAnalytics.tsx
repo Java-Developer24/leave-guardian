@@ -793,7 +793,7 @@ export default function SupervisorAnalytics() {
       <div className="mb-5 rounded-xl border border-border bg-card p-4">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div className="text-sm font-bold font-heading">Calendar Filters</div>
+            <div className="text-sm font-bold font-heading">Apply Filters</div>
             <div className="text-[11px] text-muted-foreground">
               Choose the active month here, then decide whether the page should show a single month, a 3-month window, a 6-month window, or a custom date range.
             </div>

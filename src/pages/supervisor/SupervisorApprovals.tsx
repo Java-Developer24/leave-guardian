@@ -267,8 +267,8 @@ export default function SupervisorApprovals() {
   };
 
   const handleCreateTransfer = async () => {
-    if (!currentUser || !transferGuideId || !transferBuddyId || !selectedTransferGuideLeave || !selectedTransferBuddyLeave) {
-      showToast('Select both guides and their leave dates first', 'error');
+    if (!currentUser || !transferGuideId || !transferBuddyId || !selectedTransferGuideLeave) {
+      showToast('Select guide and their leave date, plus transfer buddy', 'error');
       return;
     }
 
@@ -284,28 +284,27 @@ export default function SupervisorApprovals() {
         departmentId: deptId,
         type: 'Transfer',
         date: selectedTransferGuideLeave.date,
-        peerLeaveDate: selectedTransferBuddyLeave.date,
         days: 1,
         reason: transferComment.trim() || `Supervisor transfer request for ${selectedTransferGuideLeave.date}`,
-        status: 'PendingSupervisor',
+        status: 'Approved',
         peerId: transferBuddyId,
       });
 
-      await repo.updateLeave(created.id, {
-        history: [{
-          at: created.history[0]?.at ?? new Date().toISOString(),
-          by: currentUser.id,
-          action: 'Submitted',
-          note: transferComment.trim() || `Supervisor created a leave transfer for ${getUserName(transferGuideId)} with ${getUserName(transferBuddyId)}.`,
-        }],
-      });
+      // Immediately approve the transfer
+      await repo.approveLeave(created.id, currentUser.id, `Transfer approved by supervisor: ${transferComment.trim() || 'Leave transferred to ' + getUserName(transferBuddyId)}`);
+
+      // Remove leave from original guide
+      const originalLeave = leaves.find(l => l.id === transferGuideLeaveId);
+      if (originalLeave?.status !== 'Rejected') {
+        await repo.rejectLeave(transferGuideLeaveId, currentUser.id, 'Leave transferred to another guide');
+      }
 
       await refreshLeaves();
       resetTransferForm();
       setActiveTab('queue');
-      showToast('Transfer request created and added to the approval queue', 'success');
+      showToast(`Transfer approved! ${getUserName(transferGuideId)}'s leave on ${selectedTransferGuideLeave.date} has been transferred to ${getUserName(transferBuddyId)}. Admins have been notified.`, 'success');
     } catch {
-      showToast('Failed to create the transfer request', 'error');
+      showToast('Failed to create and approve the transfer request', 'error');
     } finally {
       setTransferSubmitting(false);
     }
@@ -559,7 +558,7 @@ export default function SupervisorApprovals() {
             <div className="rounded-xl border border-primary/15 bg-primary/6 p-5">
               <div className="text-sm font-bold font-heading">Supervisor Leave Transfer</div>
               <div className="mt-1 text-[11px] text-muted-foreground">
-                Create a transfer request for two guides, review both leave inventories for the selected month, and then send the request to the approval queue.
+                Create and approve a transfer request for two guides directly. Once approved, admins will be notified. Select two guides and their respective leave dates to initiate the transfer.
               </div>
             </div>
 
@@ -621,7 +620,7 @@ export default function SupervisorApprovals() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 border-t border-border p-4 2xl:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 border-t border-border p-4 2xl:grid-cols-1">
                 <div className="rounded-xl border border-border bg-background/75 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
@@ -676,61 +675,6 @@ export default function SupervisorApprovals() {
                     )}
                   </div>
                 </div>
-
-                <div className="rounded-xl border border-border bg-background/75 p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="text-sm font-bold">{transferBuddyId ? `${getUserName(transferBuddyId)} leave inventory` : 'Select a transfer buddy first'}</div>
-                      <div className="mt-1 text-[11px] text-muted-foreground">
-                        This mirrors the paired guide view used for transfer matching.
-                      </div>
-                    </div>
-                    {transferBuddySnapshot ? (
-                      <div className="flex flex-wrap gap-2 text-[10px]">
-                        <span className="rounded-full border border-border bg-background/80 px-3 py-1.5">Approved <span className="font-semibold">{transferBuddySnapshot.approved}</span></span>
-                        <span className="rounded-full border border-border bg-background/80 px-3 py-1.5">Pending <span className="font-semibold">{transferBuddySnapshot.pending}</span></span>
-                        <span className="rounded-full border border-border bg-background/80 px-3 py-1.5">Planned <span className="font-semibold">{transferBuddySnapshot.planned}</span></span>
-                        <span className="rounded-full border border-border bg-background/80 px-3 py-1.5">Unplanned <span className="font-semibold">{transferBuddySnapshot.unplanned}</span></span>
-                      </div>
-                    ) : null}
-                  </div>
-                  {transferBuddySnapshot ? (
-                    <div className="mt-3 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
-                      <div className="rounded-xl border border-border bg-background/80 p-3">
-                        <div className="text-muted-foreground">Leave Dates In Month</div>
-                        <div className="mt-1 font-semibold">{transferBuddySnapshot.activeDates}</div>
-                      </div>
-                      <div className="rounded-xl border border-border bg-background/80 p-3">
-                        <div className="text-muted-foreground">Next Leave Date</div>
-                        <div className="mt-1 font-semibold">{transferBuddySnapshot.nextLeaveDate ? formatDate(transferBuddySnapshot.nextLeaveDate) : 'No leave planned'}</div>
-                      </div>
-                    </div>
-                  ) : null}
-                  <div className="mt-4 space-y-2">
-                    {transferBuddyAvailability.length > 0 ? transferBuddyAvailability.map(leave => (
-                      <button
-                        key={leave.id}
-                        type="button"
-                        onClick={() => setTransferBuddyLeaveId(leave.id)}
-                        className={`w-full rounded-xl border px-4 py-3 text-left text-xs transition-colors ${
-                          transferBuddyLeaveId === leave.id
-                            ? 'border-info/25 bg-info/8 text-info'
-                            : 'border-border bg-background hover:bg-muted/30'
-                        }`}
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="font-semibold">{formatDate(leave.date)}</div>
-                          <span className="rounded-full border border-border px-2 py-0.5 text-[10px]">{leave.status}</span>
-                        </div>
-                        <div className="mt-1 opacity-80">{leave.type} leave • {leave.reason || 'No reason shared'}</div>
-                      </button>
-                    )) : (
-                      <div className="rounded-xl border border-border bg-background/80 px-4 py-6 text-center text-xs text-muted-foreground">
-                        No active leave dates available for this buddy in {formatMonthYear(transferMonthKey)}.
-                      </div>
-                    )}
-                  </div>
-                </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 border-t border-border p-4">
@@ -738,48 +682,40 @@ export default function SupervisorApprovals() {
                   <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60 font-heading">Transfer Summary</div>
                   <div className="mt-3 space-y-3 text-xs">
                     <div className="rounded-xl border border-border bg-muted/20 p-3">
-                      <div className="text-muted-foreground">Guide</div>
+                      <div className="text-muted-foreground">Transferring From</div>
                       <div className="mt-1 font-semibold">{transferGuideId ? getUserName(transferGuideId) : 'Select a guide'}</div>
                       <div className="mt-1 text-[11px] text-muted-foreground">
-                        {selectedTransferGuideLeave ? `Current leave date ${formatDate(selectedTransferGuideLeave.date)}` : 'Pick one leave date from the guide inventory'}
-                      </div>
-                      <div className="mt-1 text-[11px] text-muted-foreground">
-                        {selectedTransferGuideLeave && transferBuddyId
-                          ? `${formatDate(selectedTransferGuideLeave.date)} will be removed from ${selectedTransferGuideName} and transferred to ${selectedTransferBuddyName}.`
-                          : 'Final transfer output will appear after the guide leave and transfer buddy are selected'}
+                        {selectedTransferGuideLeave ? `Leave date: ${formatDate(selectedTransferGuideLeave.date)}` : 'Pick one leave date from the guide inventory'}
                       </div>
                     </div>
                     <div className="rounded-xl border border-border bg-muted/20 p-3">
-                      <div className="text-muted-foreground">Transfer Buddy</div>
-                      <div className="mt-1 font-semibold">{transferBuddyId ? getUserName(transferBuddyId) : 'Select a buddy'}</div>
-                      <div className="mt-1 text-[11px] text-muted-foreground">
-                        {selectedTransferBuddyLeave ? `Current leave date ${formatDate(selectedTransferBuddyLeave.date)}` : 'Pick one matching leave date from the buddy inventory'}
-                      </div>
+                      <div className="text-muted-foreground">Transferring To</div>
+                      <div className="mt-1 font-semibold">{transferBuddyId ? getUserName(transferBuddyId) : 'Select a transfer buddy'}</div>
                       <div className="mt-1 text-[11px] text-muted-foreground">
                         {selectedTransferGuideLeave && transferBuddyId
-                          ? `${selectedTransferBuddyName} will receive the transferred leave on ${formatDate(selectedTransferGuideLeave.date)} from ${selectedTransferGuideName}.`
-                          : 'Received transfer date will appear after the guide leave and transfer buddy are selected'}
+                          ? `Will receive leave on ${formatDate(selectedTransferGuideLeave.date)}`
+                          : 'Select both guide and buddy'}
                       </div>
                     </div>
                     <div className="rounded-xl border border-info/20 bg-info/10 px-4 py-3 text-xs text-info">
-                      After approval, the selected leave will be removed from the current guide and assigned to the selected transfer buddy and also notified to WFM team.
+                      ✓ The selected leave will be removed from {transferGuideId ? getUserName(transferGuideId) : 'the guide'} and directly transferred to {transferBuddyId ? getUserName(transferBuddyId) : 'the buddy'}. Both will be notified.
                     </div>
                   </div>
                 </div>
                 <div className="rounded-xl border border-border bg-background/75 p-4">
-                  <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Supervisor Notes</label>
+                  <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Supervisor Notes (Optional)</label>
                   <textarea
                     value={transferComment}
                     onChange={event => setTransferComment(event.target.value)}
-                    rows={4}
+                    rows={3}
                     className="glass-input resize-none text-sm"
-                    placeholder="Add context for the transfer request and why this pairing is needed..."
+                    placeholder="Add context for why this transfer is needed..."
                   />
                   <div className="mt-4 flex justify-end">
                     <button
                       onClick={handleCreateTransfer}
-                      disabled={transferSubmitting || !selectedTransferGuideLeave || !selectedTransferBuddyLeave}
-                      className="w-full rounded-xl btn-primary-gradient px-5 py-3 text-sm font-bold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-40 xl:w-auto"
+                      disabled={!transferGuideId || !transferBuddyId || !transferGuideLeaveId || transferSubmitting}
+                      className="rounded-xl btn-primary-gradient px-5 py-3 text-sm font-bold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       {transferSubmitting ? 'Creating...' : 'Create Transfer Request'}
                     </button>

@@ -43,7 +43,7 @@ const navSections: Record<string, { label: string; items: { to: string; label: s
     ]},
   ],
   admin: [
-    { label: 'Data', items: [
+    { label: '', items: [
       { to: '/admin/uploads/schedule', label: 'Upload Schedule', icon: Upload },
       { to: '/admin/uploads/attendance', label: 'Upload Attendance', icon: Upload },
       { to: '/admin/weekoff-swaps', label: 'Week-Off Approvals', icon: CheckSquare },
@@ -89,6 +89,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  // Compact sidebar for admin: reduce width
+  const adminSidebarWidth = 180;
   const [desktopCollapsed, setDesktopCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false;
     return window.localStorage.getItem(DESKTOP_SIDEBAR_STATE_KEY) === 'true';
@@ -128,28 +130,28 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const renderSidebarContent = ({ collapsed, mobile = false }: { collapsed: boolean; mobile?: boolean }) => (
     <div className="flex flex-col h-full">
       {/* Brand */}
-      <div className="p-5 pb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 border border-primary/15">
-            <span className="text-primary font-black text-lg font-heading">L</span>
+      <div className={currentUser.role === 'admin' ? 'p-3 pb-2' : 'p-5 pb-4'}>
+        <div className={currentUser.role === 'admin' ? 'flex items-center gap-2' : 'flex items-center gap-3'}>
+          <div className={currentUser.role === 'admin' ? 'w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 border border-primary/15' : 'w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 border border-primary/15'}>
+            <span className={currentUser.role === 'admin' ? 'text-primary font-black text-base font-heading' : 'text-primary font-black text-lg font-heading'}>L</span>
           </div>
           {!collapsed && (
             <div>
-              <h1 className="text-base font-extrabold text-foreground tracking-heading font-heading">LSM</h1>
-              <p className="text-[8px] text-muted-foreground tracking-[0.15em] uppercase font-heading mt-0.5">Leave & Shrinkage Manager Tool</p>
+              <h1 className={currentUser.role === 'admin' ? 'text-sm font-extrabold text-foreground tracking-heading font-heading' : 'text-base font-extrabold text-foreground tracking-heading font-heading'}>LSM</h1>
+              <p className={currentUser.role === 'admin' ? 'text-[7px] text-muted-foreground tracking-[0.12em] uppercase font-heading mt-0.5' : 'text-[8px] text-muted-foreground tracking-[0.15em] uppercase font-heading mt-0.5'}>Leave & Shrinkage Manager Tool</p>
             </div>
           )}
         </div>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 overflow-y-auto scrollbar-hidden space-y-5 mt-2" aria-label="Main navigation">
+      <nav className={currentUser.role === 'admin' ? 'flex-1 px-2 overflow-y-auto scrollbar-hidden space-y-3 mt-1' : 'flex-1 px-3 overflow-y-auto scrollbar-hidden space-y-5 mt-2'} aria-label="Main navigation">
         {sections.map(section => (
           <div key={section.label}>
             {!collapsed && (
-              <span className="text-[9px] font-semibold tracking-[0.15em] uppercase text-muted-foreground/50 px-3 mb-2 block font-heading">{section.label}</span>
+              <span className={currentUser.role === 'admin' ? 'text-[8px] font-semibold tracking-[0.12em] uppercase text-muted-foreground/50 px-2 mb-1 block font-heading' : 'text-[9px] font-semibold tracking-[0.15em] uppercase text-muted-foreground/50 px-3 mb-2 block font-heading'}>{section.label}</span>
             )}
-            <div className="space-y-0.5">
+            <div className={currentUser.role === 'admin' ? 'space-y-0.5' : 'space-y-0.5'}>
               {section.items.map(item => {
                 const active = location.pathname === item.to;
                 return (
@@ -158,7 +160,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     to={item.to}
                     onClick={() => setMobileOpen(false)}
                     title={collapsed ? item.label : undefined}
-                    className={`relative flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150
+                    className={`relative flex items-center ${currentUser.role === 'admin' ? 'gap-2 px-2.5 py-2 rounded-lg text-[12px]' : 'gap-3 px-3.5 py-2.5 rounded-xl text-[13px]'} font-medium transition-all duration-150
                       ${active
                         ? 'bg-primary/8 text-primary font-semibold'
                         : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
@@ -167,11 +169,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     {active && (
                       <motion.div
                         layoutId="sidebar-active"
-                        className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-primary"
+                        className={currentUser.role === 'admin' ? 'absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-primary' : 'absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-primary'}
                         transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                       />
                     )}
-                    <item.icon size={17} className={active ? 'text-primary' : ''} />
+                    <item.icon size={currentUser.role === 'admin' ? 15 : 17} className={active ? 'text-primary' : ''} />
                     {!collapsed && <span>{item.label}</span>}
                   </Link>
                 );
@@ -182,7 +184,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </nav>
 
       {/* Bottom */}
-      <div className="p-3 mt-auto">
+      <div className={currentUser.role === 'admin' ? 'p-2 mt-auto' : 'p-3 mt-auto'}>
         <div className="border-t border-border pt-4 space-y-3">
           {!collapsed && (
             <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-muted/30 border border-border">
@@ -225,7 +227,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop sidebar */}
       <aside
-        className={`hidden lg:flex flex-col bg-background border-r border-border flex-shrink-0 transition-all duration-300 ${desktopCollapsed ? 'w-[72px]' : 'w-[250px]'}`}
+        className={`hidden lg:flex flex-col bg-background border-r border-border flex-shrink-0 transition-all duration-300 ${desktopCollapsed ? 'w-[60px]' : (currentUser.role === 'admin' ? 'w-[180px]' : 'w-[250px]')}`}
         aria-label="Sidebar"
         aria-expanded={!desktopCollapsed}
       >
@@ -248,7 +250,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               animate={{ x: 0 }}
               exit={{ x: -280 }}
               transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-              className="relative w-[250px] h-full bg-background border-r border-border"
+              className={`relative ${currentUser.role === 'admin' ? 'w-[180px]' : 'w-[250px]'} h-full bg-background border-r border-border`}
             >
               <button onClick={() => setMobileOpen(false)} className="absolute top-4 right-4 p-2 rounded-lg hover:bg-muted/30 transition-colors z-10">
                 <X size={18} className="text-muted-foreground" />

@@ -130,7 +130,7 @@ const roles = [
   {
     role: 'Manager',
     desc: 'Track department and supervisor performance, review forecast risks, and compare team-level schedule visibility before decisions are made.',
-    items: ['Department insights', 'Supervisor performance views', 'Cross-team schedule visibility', 'Forecast review oversight'],
+    items: ['Department insights', 'Supervisor performance views', 'All Departments Schedule visibility', 'Forecast review oversight'],
     color: 'manager',
     icon: LineChart,
   },
