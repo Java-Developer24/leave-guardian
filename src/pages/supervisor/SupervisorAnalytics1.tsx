@@ -219,8 +219,14 @@ function groupConsecutiveRiskDates(rows: DailyTeamMetric[]) {
 }
 
 export default function SupervisorAnalytics() {
+    const today = useMemo(() => new Date(), []);
+      const [selectedDepartmentId, setSelectedDepartmentId] = useState('all');
+      const [selectedSupervisorId, setSelectedSupervisorId] = useState('all');
+        const [enterpriseDateFrom, setEnterpriseDateFrom] = useState(toDateStr(new Date(today.getFullYear(), today.getMonth(), 1)));
+       const [enterpriseDateTo, setEnterpriseDateTo] = useState(toDateStr(new Date(today.getFullYear(), today.getMonth() + 1, 0)));
+  const [enterpriseDeptId, setEnterpriseDeptId] = useState('all');
   const { leaves, schedule, rules, currentUser, users, departments, attendance, weekoffSwapRequests } = useAppStore();
-  const today = useMemo(() => new Date(), []);
+  
   const todayKey = toDateStr(today);
   const previousDay = useMemo(() => {
     const value = new Date(today);
@@ -248,7 +254,12 @@ export default function SupervisorAnalytics() {
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isBotTyping, setIsBotTyping] = useState(false);
-
+ const filteredSupervisors = useMemo(() => {
+    if (selectedDepartmentId === 'all') {
+      return users.filter(u => u.role === 'supervisor').sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return users.filter(u => u.role === 'supervisor' && u.departmentId === selectedDepartmentId).sort((a, b) => a.name.localeCompare(b.name));
+  }, [selectedDepartmentId, users]);
   useEffect(() => {
     if (rangePreset === 'custom') return;
     const selectedMonthDate = getMonthStart(selectedMonthKey);
@@ -775,99 +786,87 @@ export default function SupervisorAnalytics() {
 
   return (
     <motion.div {...pageTransition}>
-      <SectionHeader
-        tag="Supervisor Analytics"
-        title="Performance"
-        highlight="Analytics"
-        description={`Department-level analytics for ${myDept?.name ?? 'your department'} with month, date-range, and forecast coverage views.`}
-        action={(
-          <button
-            onClick={() => setChatOpen(true)}
-            className="inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-4 py-2.5 text-sm font-bold text-primary transition-colors hover:bg-primary/15"
-          >
-            <Bot size={15} /> Chat bot
-          </button>
-        )}
-      />
+    <div className="rounded-xl border border-border bg-card p-4 mb-4">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-bold font-heading">Apply Filters</div>
+                    <div className="text-[11px] text-muted-foreground">
+                      Select a supervisor and department to view their performance analytics.
+                    </div>
+                  </div>
+               
+                </div>
+    
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div>
+                    <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Department</label>
+                    <select
+                      value={selectedDepartmentId}
+                      onChange={event => {
+                        setSelectedDepartmentId(event.target.value);
+                        setSelectedSupervisorId('all');
+                      }}
+                      className="glass-input text-sm w-full"
+                    >
+                      <option value="all">All Departments</option>
+                      {departments.map(department => (
+                        <option key={department.id} value={department.id}>{department.name}</option>
+                      ))}
+                    </select>
+                  </div>
+    
+                  <div>
+                    <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Supervisor</label>
+                    <select
+                      value={selectedSupervisorId}
+                      onChange={event => setSelectedSupervisorId(event.target.value)}
+                      className="glass-input text-sm w-full"
+                    >
+                      <option value="all">All Supervisors</option>
+                      {filteredSupervisors.map(supervisor => (
+                        <option key={supervisor.id} value={supervisor.id}>{supervisor.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+    
+                 {/* Month Selector */}
+                <div className="grid grid-cols-3 items-center justify-between gap-3 mt-4">
+                  <div>
+               <label className="block text-[10px] tracking-section text-center uppercase text-muted-foreground mb-1.5 font-semibold">Month</label>
+                  <input
+                    type="month"
+                    
+                    value={selectedMonthKey}
+                    onChange={event => setSelectedMonthKey(event.target.value)}
+                    className="glass-input text-sm flex-1 text-center "
+                  />
+                  </div>
+                  
+                   <div>
+                    <label className="block text-[10px] tracking-section uppercase text-muted-foreground mb-1.5 font-semibold">Date From</label>
+                    <input
+                      type="date"
+                      value={enterpriseDateFrom}
+                      onChange={event => setEnterpriseDateFrom(event.target.value)}
+                      className="glass-input text-sm w-full"
+                    />
+                  </div>
+    
+                  <div>
+                    <label className="block text-[10px] tracking-section uppercase text-muted-foreground mb-1.5 font-semibold">Date To</label>
+                    <input
+                      type="date"
+                      value={enterpriseDateTo}
+                      onChange={event => setEnterpriseDateTo(event.target.value)}
+                      className="glass-input text-sm w-full"
+                    />
+                  </div>
+                </div>
+    
+              </div>
 
-      <div className="mb-5 rounded-xl border border-border bg-card p-4">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="text-sm font-bold font-heading">Apply Filters</div>
-            <div className="text-[11px] text-muted-foreground">
-              Choose the active month here, then decide whether the page should show a single month, a 3-month window, a 6-month window, or a custom date range.
-            </div>
-          </div>
-          {/* <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleMonthStep(-1)}
-              className="rounded-xl border border-border p-2 transition-colors hover:bg-muted/30"
-              aria-label="Previous month"
-            >
-              <ChevronLeft size={14} />
-            </button>
-            <input
-              type="month"
-              value={selectedMonthKey}
-              onChange={event => setSelectedMonthKey(event.target.value)}
-              className="glass-input w-[180px] text-sm"
-            />
-            <button
-              onClick={() => handleMonthStep(1)}
-              className="rounded-xl border border-border p-2 transition-colors hover:bg-muted/30"
-              aria-label="Next month"
-            >
-              <ChevronRight size={14} />
-            </button>
-          </div> */}
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-          <div>
-            <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Range Window</label>
-            <select
-              value={rangePreset}
-              onChange={event => setRangePreset(event.target.value === 'custom' ? 'custom' : Number(event.target.value) as RangePreset)}
-              className="glass-input text-sm"
-            >
-              <option value={1}>1 Month</option>
-              <option value={3}>3 Months</option>
-              <option value={6}>6 Months</option>
-              <option value="custom">Custom Date Range</option>
-            </select>
-          </div>
-          <div>
-            <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Date From</label>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={event => setDateFrom(event.target.value)}
-              disabled={rangePreset !== 'custom'}
-              className="glass-input text-sm disabled:cursor-not-allowed disabled:opacity-70"
-            />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Date To</label>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={event => setDateTo(event.target.value)}
-              disabled={rangePreset !== 'custom'}
-              className="glass-input text-sm disabled:cursor-not-allowed disabled:opacity-70"
-            />
-          </div>
-          {/* <div>
-            <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Months Included</label>
-            <div className="flex min-h-[42px] flex-wrap gap-2 rounded-xl border border-border bg-muted/20 px-3 py-2">
-              {selectedRangeMonths.map(month => (
-                <span key={month.key} className="rounded-full border border-border bg-background px-2.5 py-1 text-[10px] font-semibold">
-                  {month.label}
-                </span>
-              ))}
-            </div>
-          </div> */}
-        </div>
-      </div>
+      
 
       <motion.div
         {...staggerContainer}
@@ -875,6 +874,7 @@ export default function SupervisorAnalytics() {
         animate="animate"
         className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5"
       >
+        
         <motion.div variants={staggerItem}>
           <KpiCard label="Forecast Accuracy" value="94.3%" icon={<Target size={18} />} accent="success" subtitle="Forecasted shrinkage%" />
         </motion.div>
