@@ -160,11 +160,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     to={item.to}
                     onClick={() => setMobileOpen(false)}
                     title={collapsed ? item.label : undefined}
-                    className={`relative flex items-center ${currentUser.role === 'admin' ? 'gap-2 px-2.5 py-2 rounded-lg text-[12px]' : 'gap-3 px-3.5 py-2.5 rounded-xl text-[13px]'} font-medium transition-all duration-150
-                      ${active
-                        ? 'bg-primary/8 text-primary font-semibold'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
-                      }`}
+                    className={`relative flex items-center
+  ${collapsed
+    ? 'justify-center px-0 py-2'
+    : currentUser.role === 'admin'
+      ? 'gap-2 px-2.5 py-2 rounded-lg text-[12px]'
+      : 'gap-3 px-3.5 py-2.5 rounded-xl text-[13px]'
+  }
+  font-medium transition-all duration-150
+  ${active
+    ? 'bg-primary/8 text-primary font-semibold'
+    : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
+  }`}
                   >
                     {active && (
                       <motion.div
@@ -173,8 +180,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                         transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                       />
                     )}
-                    <item.icon size={currentUser.role === 'admin' ? 15 : 17} className={active ? 'text-primary' : ''} />
-                    {!collapsed && <span>{item.label}</span>}
+<item.icon
+  size={collapsed ? 20 : 18}
+  className={`flex-shrink-0 ${active ? 'text-primary' : ''}`}
+/>                    {!collapsed && <span>{item.label}</span>}
                   </Link>
                 );
               })}
@@ -227,7 +236,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop sidebar */}
       <aside
-        className={`hidden lg:flex flex-col bg-background border-r border-border flex-shrink-0 transition-all duration-300 ${desktopCollapsed ? 'w-[60px]' : (currentUser.role === 'admin' ? 'w-[180px]' : 'w-[250px]')}`}
+        className={`hidden lg:flex flex-col bg-background border-r border-border flex-shrink-0 transition-all duration-300 ${desktopCollapsed ? 'w-[70px]' : (currentUser.role === 'admin' ? 'w-[180px]' : 'w-[250px]')}`}
         aria-label="Sidebar"
         aria-expanded={!desktopCollapsed}
       >
