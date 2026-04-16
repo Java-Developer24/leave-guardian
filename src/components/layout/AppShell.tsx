@@ -51,6 +51,9 @@ const navSections: Record<string, { label: string; items: { to: string; label: s
     { label: 'Operations', items: [
       { to: '/admin/schedule', label: 'Schedule View', icon: Calendar },
     ]},
+    { label: 'Operations', items: [
+      { to: '/admin/attendance', label: 'Attendance Tracker', icon: Calendar },
+    ]},
     { label: 'Configuration', items: [
       { to: '/admin/config', label: 'Configuration', icon: Settings },
       { to: '/admin/config/holidays', label: 'Holiday Master', icon: Calendar },

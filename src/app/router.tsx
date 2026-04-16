@@ -21,6 +21,7 @@ import AdminHolidays from '@/pages/admin/config/AdminHolidays';
 import AdminAnalytics from '@/pages/admin/AdminAnalytics';
 import AdminSchedule from '@/pages/admin/AdminSchedule';
 import AdminWeekoffApprovals from '@/pages/admin/AdminWeekoffApprovals';
+import AdminAttendanceTracker from '@/pages/admin/AdminAttendenceTracker';
 
 function RoleGuard({ role, children }: { role: string; children: React.ReactNode }) {
   const currentUser = useAppStore(s => s.currentUser);
@@ -54,6 +55,7 @@ export default function AppRouter() {
         <Route path="/admin/uploads/attendance" element={<RoleGuard role="admin"><AdminAttendanceUpload /></RoleGuard>} />
         <Route path="/admin/weekoff-swaps" element={<RoleGuard role="admin"><AdminWeekoffApprovals /></RoleGuard>} />
         <Route path="/admin/schedule" element={<RoleGuard role="admin"><AdminSchedule /></RoleGuard>} />
+        <Route path="/admin/attendance" element={<RoleGuard role="admin"><AdminAttendanceTracker /></RoleGuard>} />
         <Route path="/admin/config" element={<RoleGuard role="admin"><AdminConfig /></RoleGuard>} />
         <Route path="/admin/config/holidays" element={<RoleGuard role="admin"><AdminHolidays /></RoleGuard>} />
         <Route path="/admin/analytics" element={<RoleGuard role="admin"><AdminAnalytics /></RoleGuard>} />

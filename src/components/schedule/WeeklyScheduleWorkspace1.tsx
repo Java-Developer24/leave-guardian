@@ -82,11 +82,11 @@ const headerCopy: Record<
       "View weekly guide schedules across departments and teams using department and team filters, and manage week-off planning across your scope.",
   },
   admin: {
-    tag: "Admin Schedule",
+    tag: "Admin Attendence",
     title: "Enterprise",
-    highlight: "Schedule",
+    highlight: "Attendence Tracker",
     description:
-      "Review weekly guide schedules across departments and teams with the same planning view used by supervisors.",
+      "Review weekly guide attendences across departments and teams with the same planning view used by supervisors.",
   },
    
 };
@@ -1139,7 +1139,7 @@ export default function WeeklyScheduleWorkspace({
       className="flex-1 h-[52px] flex items-center justify-center gap-2 rounded-xl border border-green-300 bg-green-100 text-green-700 font-semibold hover:bg-green-200 transition"
     >
       <Download size={16} />
-      <span >Download Schedule</span>
+      <span >Download Attendence</span>
     </button>
 
   </div>

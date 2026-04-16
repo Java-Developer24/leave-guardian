@@ -194,7 +194,7 @@ export default function AdminWeekoffApprovals() {
                         {getWeekDayNames(request.sourceDate).slice(0, 2).join(', ')} week-off
                       </div>
                       <div className="text-[10px] text-muted-foreground mt-2">
-                        📅 Starting: {formatDate(request.sourceDate)}
+                        📅 Date: {formatDate(request.sourceDate)}
                       </div>
                     </div>
                     <div className="rounded-xl border border-border bg-muted/20 p-3">
@@ -205,7 +205,7 @@ export default function AdminWeekoffApprovals() {
                         {getWeekDayNames(request.peerDate).slice(0, 2).join(', ')} week-off
                       </div>
                       <div className="text-[10px] text-muted-foreground mt-2">
-                        📅 Starting: {formatDate(request.peerDate)}
+                        📅 Date: {formatDate(request.peerDate)}
                       </div>
                     </div>
                   </div>
@@ -362,7 +362,7 @@ export default function AdminWeekoffApprovals() {
               <option value="all">All Notifications</option>
               <option value="Transfer">Transferred Leaves</option>
               <option value="Planned">Planned Leave Requests</option>
-              <option value="Unplanned">Unplanned Leave Requests</option>
+              {/* <option value="Unplanned">Unplanned Leave Requests</option> */}
             </select>
           </div>
 
