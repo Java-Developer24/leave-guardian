@@ -1268,7 +1268,7 @@ export default function WeeklyScheduleWorkspace({
         <div className="px-5 py-4 border-b border-border flex items-center justify-between gap-3">
           <div>
             <div className="text-sm font-bold font-heading">
-              Weekly Guide Schedule
+              Weekly Guide Attendance
             </div>
             <div className="text-[11px] text-muted-foreground">
               {formatDate(selectedWeekStart)} to {formatDate(weekEndKey)}
