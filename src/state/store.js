@@ -1,0 +1,111 @@
+import { create } from "zustand";
+import { mockRepo } from "@/data/mock/MockRepository";
+
+export const useAppStore = create((set, get) => ({
+  repo: mockRepo,
+  currentUser: null,
+  users: [],
+  departments: [],
+  leaves: [],
+  forecastAlerts: [],
+  weekoffSwapRequests: [],
+  holidays: [],
+  rules: { maxDailyPct: 10, maxMonthlyPct: 10, agentMonthlyLeaveCap: 2 },
+  leaveWindow: { open: true, startDay: 22, endDay: 26 },
+  schedule: [],
+  attendance: [],
+  loading: false,
+
+  setRepo: (repo) => set({ repo }),
+
+  login: async (userId) => {
+    const repo = get().repo;
+    const user = await repo.getUser(userId);
+    if (!user) throw new Error("User not found");
+    set({ currentUser: user });
+    await get().loadAll();
+  },
+
+  logout: () =>
+    set({
+      currentUser: null,
+      users: [],
+      departments: [],
+      leaves: [],
+      forecastAlerts: [],
+      weekoffSwapRequests: [],
+      holidays: [],
+      schedule: [],
+      attendance: [],
+    }),
+
+  loadAll: async () => {
+    set({ loading: true });
+    const repo = get().repo;
+    const [
+      users,
+      departments,
+      leaves,
+      forecastAlerts,
+      weekoffSwapRequests,
+      holidays,
+      rules,
+      leaveWindow,
+      schedule,
+      attendance,
+    ] = await Promise.all([
+      repo.getUsers(),
+      repo.getDepartments(),
+      repo.getAllLeaves(),
+      repo.getForecastAlerts(),
+      repo.getWeekoffSwapRequests(),
+      repo.getHolidays(),
+      repo.getRules(),
+      repo.getLeaveWindow(),
+      repo.getSchedule(),
+      repo.getAttendance(),
+    ]);
+    set({
+      users,
+      departments,
+      leaves,
+      forecastAlerts,
+      weekoffSwapRequests,
+      holidays,
+      rules,
+      leaveWindow,
+      schedule,
+      attendance,
+      loading: false,
+    });
+  },
+
+  refreshLeaves: async () => {
+    const leaves = await get().repo.getAllLeaves();
+    set({ leaves });
+  },
+  refreshForecastAlerts: async () => {
+    const forecastAlerts = await get().repo.getForecastAlerts();
+    set({ forecastAlerts });
+  },
+  refreshWeekoffSwapRequests: async () => {
+    const weekoffSwapRequests = await get().repo.getWeekoffSwapRequests();
+    set({ weekoffSwapRequests });
+  },
+  refreshHolidays: async () => {
+    const holidays = await get().repo.getHolidays();
+    set({ holidays });
+  },
+  refreshRules: async () => {
+    const rules = await get().repo.getRules();
+    set({ rules });
+  },
+  refreshLeaveWindow: async () => {
+    const leaveWindow = await get().repo.getLeaveWindow();
+    set({ leaveWindow });
+  },
+  refreshSchedule: async () => {
+    const schedule = await get().repo.getSchedule();
+    set({ schedule });
+  },
+}));
