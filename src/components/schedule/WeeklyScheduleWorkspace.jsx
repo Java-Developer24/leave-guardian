@@ -25,6 +25,7 @@ import {
   validateWeekMoveRequest,
 } from "@/core/utils/weekoffPlanner";
 import { showToast } from "@/components/toasts/ToastContainer";
+import { apiService } from "@/services/apiService";
 import { ArrowLeftRight, Send, Users } from "lucide-react";
 
 function addDays(date, days) {
@@ -215,7 +216,6 @@ export default function WeeklyScheduleWorkspace({ mode, initialMonthDate }) {
     schedule,
     leaves,
     attendance,
-    repo,
     weekoffSwapRequests,
     refreshWeekoffSwapRequests,
   } = useAppStore();
@@ -778,12 +778,6 @@ export default function WeeklyScheduleWorkspace({ mode, initialMonthDate }) {
     swapScope,
   ]);
 
-  const scopeDepartmentName =
-    scopeDepartmentId === "all"
-      ? "All Departments"
-      : getDepartmentName(scopeDepartmentId);
-  const scopeTeamName =
-    selectedTeamId === "all" ? "All Teams" : getUserName(selectedTeamId);
   const weekLeaveCount = weekRows.reduce(
     (count, row) => count + row.weekLeaves.length,
     0,
@@ -826,7 +820,7 @@ export default function WeeklyScheduleWorkspace({ mode, initialMonthDate }) {
 
     setSubmitting(true);
     try {
-      await repo.createWeekoffSwapRequest({
+      await apiService.createWeekoffSwapRequest({
         requesterId: currentUser.id,
         departmentId: scopeDepartmentId,
         sourceGuideId: activeGuideId,
@@ -1152,11 +1146,6 @@ export default function WeeklyScheduleWorkspace({ mode, initialMonthDate }) {
                   ))}
                 </select>
               </div>
-
-              {/* <div className="rounded-xl border border-border bg-muted/20 px-3.5 py-3 text-xs text-muted-foreground flex items-center gap-2">
-               <Filter size={14} className="text-primary" />
-               Team filter uses supervisor reporting groups.
-              </div> */}
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -1218,16 +1207,6 @@ export default function WeeklyScheduleWorkspace({ mode, initialMonthDate }) {
                 </div>
               </div>
             </div>
-
-            {/* <div className="rounded-xl border border-border bg-background/80 px-4 py-3">
-             <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60 font-heading">
-               <Building2 size={12} className="text-primary" /> Current Scope
-             </div>
-             <div className="mt-2 text-sm font-semibold">{scopeDepartmentName}</div>
-             <div className="mt-1 text-xs text-muted-foreground">
-               {selectedTeamId === 'all' ? 'All teams in this department scope' : `${scopeTeamName} reporting group`}
-             </div>
-            </div> */}
           </div>
         </div>
       )}

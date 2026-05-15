@@ -16,6 +16,7 @@ import {
 import { countScheduledGuidesForDepartment } from "@/core/utils/forecast";
 import { showToast } from "@/components/toasts/ToastContainer";
 import { useLiveNow } from "@/hooks/use-live-now";
+import { apiService } from "@/services/apiService";
 import {
   AlertTriangle,
   BarChart3,
@@ -24,6 +25,7 @@ import {
   Shield,
   Users,
   XCircle,
+  Clock,
 } from "lucide-react";
 
 function getHistoryEntry(leave, action) {
@@ -83,7 +85,6 @@ export default function SupervisorApprovals() {
     schedule,
     rules,
     holidays,
-    repo,
     refreshLeaves,
     forecastAlerts,
   } = useAppStore();
@@ -287,38 +288,12 @@ export default function SupervisorApprovals() {
         : [],
     [transferGuideId, transferMonthKey, leaves],
   );
-  const transferBuddyAvailability = useMemo(
-    () =>
-      transferBuddyId
-        ? getTransferAvailability(transferBuddyId, transferMonthKey)
-        : [],
-    [transferBuddyId, transferMonthKey, leaves],
-  );
-  const selectedTransferGuideLeave = transferGuideAvailability.find(
-    (leave) => leave.id === transferGuideLeaveId,
-  );
-  const selectedTransferBuddyLeave = transferBuddyAvailability.find(
-    (leave) => leave.id === transferBuddyLeaveId,
-  );
-  const selectedTransferGuideName = transferGuideId
-    ? getUserName(transferGuideId)
-    : "the selected guide";
-  const selectedTransferBuddyName = transferBuddyId
-    ? getUserName(transferBuddyId)
-    : "the selected buddy";
   const transferGuideSnapshot = useMemo(
     () =>
       transferGuideId
         ? getTransferGuideSnapshot(transferGuideId, transferMonthKey)
         : null,
     [transferGuideId, transferMonthKey, leaves],
-  );
-  const transferBuddySnapshot = useMemo(
-    () =>
-      transferBuddyId
-        ? getTransferGuideSnapshot(transferBuddyId, transferMonthKey)
-        : null,
-    [transferBuddyId, transferMonthKey, leaves],
   );
 
   const resetTransferForm = () => {
@@ -348,14 +323,14 @@ export default function SupervisorApprovals() {
     }
 
     if (reviewAction.action === "approve") {
-      await repo.approveLeave(
+      await apiService.approveLeave(
         reviewAction.id,
         currentUser.id,
         comment.trim() || undefined,
       );
       showToast("Leave approved", "success");
     } else {
-      await repo.rejectLeave(
+      await apiService.rejectLeave(
         reviewAction.id,
         currentUser.id,
         comment.trim() || undefined,
@@ -388,7 +363,7 @@ export default function SupervisorApprovals() {
 
     setTransferSubmitting(true);
     try {
-      const created = await repo.createLeave({
+      const created = await apiService.createLeave({
         requesterId: transferGuideId,
         departmentId: deptId,
         type: "Transfer",
@@ -402,7 +377,7 @@ export default function SupervisorApprovals() {
       });
 
       // Immediately approve the transfer
-      await repo.approveLeave(
+      await apiService.approveLeave(
         created.id,
         currentUser.id,
         `Transfer approved by supervisor: ${transferComment.trim() || "Leave transferred to " + getUserName(transferBuddyId)}`,
@@ -411,7 +386,7 @@ export default function SupervisorApprovals() {
       // Remove leave from original guide
       const originalLeave = leaves.find((l) => l.id === transferGuideLeaveId);
       if (originalLeave?.status !== "Rejected") {
-        await repo.rejectLeave(
+        await apiService.rejectLeave(
           transferGuideLeaveId,
           currentUser.id,
           "Leave transferred to another guide",
@@ -432,6 +407,9 @@ export default function SupervisorApprovals() {
     }
   };
 
+  const selectedTransferGuideLeave = transferGuideAvailability.find(
+    (leave) => leave.id === transferGuideLeaveId,
+  );
   const queueCards = pending;
 
   return (
@@ -1145,19 +1123,6 @@ export default function SupervisorApprovals() {
                 </div>
               </div>
             </div>
-            {/* <div className="rounded-xl border border-border bg-card p-5">
-               <div className="flex items-center gap-3">
-                 <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-info/15 bg-info/10">
-                   <BarChart3 size={16} className="text-info" />
-                 </div>
-                 <div>
-                   <div className="text-xl font-black font-heading">
-                     {openForecastAlerts.length > 0 ? Math.max(...openForecastAlerts.map(alert => alert.forecastVolume)) : 0}
-                   </div>
-                   <div className="text-[10px] text-muted-foreground">Peak forecast volume</div>
-                 </div>
-               </div>
-              </div> */}
           </div>
 
           {openForecastAlerts.length === 0 ? (
@@ -1265,9 +1230,10 @@ export default function SupervisorApprovals() {
               <div className="rounded-xl border border-border bg-muted/20 p-3">
                 <div className="text-muted-foreground">Approval Time Left</div>
                 <div
-                  className={`mt-1 text-sm font-semibold ${getApprovalTimer(reviewLeave)?.overdue ? "text-destructive" : "text-warning"}`}
+                  className={`mt-1 text-sm font-semibold ${getApprovalCountdown(reviewLeave.history[0]?.at, 72, liveNow)?.overdue ? "text-destructive" : "text-warning"}`}
                 >
-                  {getApprovalTimer(reviewLeave)?.text ?? "Not started"}
+                  {getApprovalCountdown(reviewLeave.history[0]?.at, 72, liveNow)
+                    ?.text ?? "Not started"}
                 </div>
               </div>
               <div className="rounded-xl border border-border bg-muted/20 p-3">

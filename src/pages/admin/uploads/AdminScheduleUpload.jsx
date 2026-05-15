@@ -5,6 +5,7 @@ import { useAppStore } from "@/state/store";
 import SectionHeader from "@/components/SectionHeader";
 import { showToast } from "@/components/toasts/ToastContainer";
 import { Upload, FileSpreadsheet, CheckCircle } from "lucide-react";
+import { apiService } from "@/services/apiService";
 
 const sampleSchedule = [
   {
@@ -66,7 +67,7 @@ const sampleSchedule = [
 ];
 
 export default function AdminScheduleUpload() {
-  const { repo, refreshSchedule, users } = useAppStore();
+  const { refreshSchedule, users } = useAppStore();
   const [preview, setPreview] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -77,7 +78,7 @@ export default function AdminScheduleUpload() {
   const handleSave = async () => {
     if (!preview) return;
     setSaving(true);
-    await repo.uploadSchedule(preview);
+    await apiService.uploadSchedule(preview);
     await refreshSchedule();
     showToast("Schedule saved successfully", "success");
     setPreview(null);

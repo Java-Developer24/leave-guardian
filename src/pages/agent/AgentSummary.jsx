@@ -18,6 +18,7 @@ import {
 } from "@/core/utils/dates";
 import { useLiveNow } from "@/hooks/use-live-now";
 import { showToast } from "@/components/toasts/ToastContainer";
+import { apiService } from "@/services/apiService";
 import {
   Clock,
   XCircle,
@@ -68,7 +69,7 @@ function LeaveChoiceCard({
 }
 
 export default function AgentSummary() {
-  const { currentUser, leaves, repo, users, departments } = useAppStore();
+  const { currentUser, leaves, users, departments } = useAppStore();
   const refreshLeaves = useAppStore((state) => state.refreshLeaves);
   const refreshForecastAlerts = useAppStore(
     (state) => state.refreshForecastAlerts,
@@ -305,7 +306,7 @@ export default function AgentSummary() {
       return;
     }
 
-    await repo.createLeave({
+    await apiService.createLeave({
       requesterId: currentUser.id,
       departmentId: currentUser.departmentId,
       type: "Swap",
@@ -323,7 +324,7 @@ export default function AgentSummary() {
 
   const handleCancel = async () => {
     if (!cancelLeaveId) return;
-    await repo.updateLeave(cancelLeaveId, { status: "Cancelled" });
+    await apiService.updateLeave(cancelLeaveId, { status: "Cancelled" });
     await Promise.all([refreshLeaves(), refreshForecastAlerts()]);
     setCancelConfirmOpen(false);
     setCancelLeaveId(null);

@@ -14,6 +14,7 @@ import {
 } from "@/core/utils/dates";
 import { useLiveNow } from "@/hooks/use-live-now";
 import { showToast } from "@/components/toasts/ToastContainer";
+import { apiService } from "@/services/apiService";
 import {
   Calendar,
   FileText,
@@ -29,6 +30,7 @@ import {
   TrendingUp,
   BellRing,
   Check,
+  TrendingUp as TrendingUpIcon,
 } from "lucide-react";
 
 function QuotaRing({ used, cap }) {
@@ -89,7 +91,6 @@ export default function AgentHome() {
     rules,
     departments,
     attendance,
-    repo,
     refreshLeaves,
   } = useAppStore();
 
@@ -253,7 +254,7 @@ export default function AgentHome() {
       },
     ];
 
-    await repo.updateLeave(selectedAction.id, {
+    await apiService.updateLeave(selectedAction.id, {
       status: "PendingSupervisor",
       history: updatedHistory,
     });

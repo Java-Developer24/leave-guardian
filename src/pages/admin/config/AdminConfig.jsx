@@ -5,6 +5,7 @@ import { useAppStore } from "@/state/store";
 import SectionHeader from "@/components/SectionHeader";
 import { showToast } from "@/components/toasts/ToastContainer";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { apiService } from "@/services/apiService";
 import {
   Calendar,
   Lock,
@@ -16,7 +17,7 @@ import {
 } from "lucide-react";
 
 export default function AdminConfig() {
-  const { leaveWindow, rules, repo, refreshLeaveWindow, refreshRules } =
+  const { leaveWindow, rules, refreshLeaveWindow, refreshRules } =
     useAppStore();
 
   // Leave Window state
@@ -51,7 +52,7 @@ export default function AdminConfig() {
       return;
     }
     setSavingWindow(true);
-    await repo.updateLeaveWindow({ open, startDay, endDay });
+    await apiService.updateLeaveWindow({ open, startDay, endDay });
     await refreshLeaveWindow();
     showToast("Leave window updated", "success");
     setSavingWindow(false);
@@ -59,7 +60,7 @@ export default function AdminConfig() {
 
   const handleSaveRules = async () => {
     setSavingRules(true);
-    await repo.updateRules({
+    await apiService.updateRules({
       maxDailyPct,
       maxMonthlyPct,
       agentMonthlyLeaveCap,

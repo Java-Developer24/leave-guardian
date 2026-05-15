@@ -5,9 +5,10 @@ import { useAppStore } from "@/state/store";
 import SectionHeader from "@/components/SectionHeader";
 import { showToast } from "@/components/toasts/ToastContainer";
 import { Calendar, Lock, Unlock, Info, Shield, Clock } from "lucide-react";
+import { apiService } from "@/services/apiService";
 
 export default function AdminLeaveWindow() {
-  const { leaveWindow, repo, refreshLeaveWindow } = useAppStore();
+  const { leaveWindow, refreshLeaveWindow } = useAppStore();
   const [open, setOpen] = useState(leaveWindow.open);
   const [startDay, setStartDay] = useState(leaveWindow.startDay);
   const [endDay, setEndDay] = useState(leaveWindow.endDay);
@@ -25,7 +26,7 @@ export default function AdminLeaveWindow() {
       return;
     }
     setSaving(true);
-    await repo.updateLeaveWindow({ open, startDay, endDay });
+    await apiService.updateLeaveWindow({ open, startDay, endDay });
     await refreshLeaveWindow();
     showToast("Leave window updated successfully", "success");
     setSaving(false);

@@ -16,6 +16,7 @@ import {
 } from "@/core/utils/dates";
 import { showToast } from "@/components/toasts/ToastContainer";
 import { useLiveNow } from "@/hooks/use-live-now";
+import { apiService } from "@/services/apiService";
 import {
   AlertTriangle,
   Calendar,
@@ -49,7 +50,6 @@ export default function SupervisorHome() {
     rules,
     currentUser,
     users,
-    repo,
     departments,
     weekoffSwapRequests,
     forecastAlerts,
@@ -151,13 +151,6 @@ export default function SupervisorHome() {
       [[], []],
     );
   }, [pendingPreview]);
-  const pendingTransferCount = pending.filter(
-    (leave) => leave.type === "Transfer",
-  ).length;
-  const pendingWeekoffSwaps = weekoffSwapRequests.filter(
-    (request) =>
-      request.departmentId === deptId && request.status === "PendingAdmin",
-  ).length;
 
   const selectedMonthApprovedLeaves = deptLeaves.filter(
     (leave) =>
@@ -221,7 +214,6 @@ export default function SupervisorHome() {
         ).length;
         const targetHours = standardTargetHoursPerGuide;
         const achievedHours = Math.max(0, targetHours - approvedDays * 8);
-        const deficitHours = Math.max(0, targetHours - achievedHours);
 
         return {
           id: agent.id,
@@ -232,15 +224,15 @@ export default function SupervisorHome() {
           pending: pendingCount,
           achievedHours,
           targetHours,
-          deficitHours,
           approvedDays,
           approvedLeaveCount,
           requestCount: activeMonthLeaves.length,
         };
       })
       .sort((a, b) => {
-        if (b.deficitHours !== a.deficitHours)
-          return b.deficitHours - a.deficitHours;
+        const aDeficit = Math.max(0, a.targetHours - a.achievedHours);
+        const bDeficit = Math.max(0, b.targetHours - b.achievedHours);
+        if (bDeficit !== aDeficit) return bDeficit - aDeficit;
         return b.requestCount - a.requestCount;
       })
       .slice(0, 15);
@@ -265,7 +257,7 @@ export default function SupervisorHome() {
   const handleApprove = async () => {
     if (!confirmApproveLeave || !currentUser) return;
 
-    await repo.approveLeave(
+    await apiService.approveLeave(
       confirmApproveLeave.id,
       currentUser.id,
       reviewNotes[confirmApproveLeave.id]?.trim() || undefined,
@@ -278,7 +270,7 @@ export default function SupervisorHome() {
   const handleReject = async (id) => {
     if (!currentUser) return;
 
-    await repo.rejectLeave(
+    await apiService.rejectLeave(
       id,
       currentUser.id,
       reviewNotes[id]?.trim() || undefined,
@@ -783,30 +775,26 @@ export default function SupervisorHome() {
                         </div>
                         <div
                           className={`rounded-lg border p-2 ${
-                            agent.deficitHours > 0
+                            Math.max(0, agent.targetHours - agent.achievedHours) > 0
                               ? "border-warning/20 bg-warning/10"
                               : "border-success/20 bg-success/10"
                           }`}
                         >
                           <div className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground">
-                            {agent.deficitHours > 0 ? "Deficit" : "On Track"}
+                            {Math.max(0, agent.targetHours - agent.achievedHours) > 0 ? "Deficit" : "On Track"}
                           </div>
                           <div
                             className={`mt-1 font-semibold ${
-                              agent.deficitHours > 0
+                              Math.max(0, agent.targetHours - agent.achievedHours) > 0
                                 ? "text-warning"
                                 : "text-success"
                             }`}
                           >
-                            {agent.deficitHours > 0
-                              ? `${agent.deficitHours} hrs`
+                            {Math.max(0, agent.targetHours - agent.achievedHours) > 0
+                              ? `${Math.max(0, agent.targetHours - agent.achievedHours)} hrs`
                               : "On plan"}
                           </div>
                         </div>
-                        {/* <div className="rounded-lg border border-border bg-muted/20 p-2.5">
-                         <div className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground">Leaves</div>
-                         <div className="mt-1 font-semibold">{agent.approvedLeaveCount} approved / {agent.requestCount} total</div>
-                        </div> */}
                       </div>
                     </div>
                   </td>

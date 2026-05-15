@@ -20,7 +20,7 @@ import {
   Eye,
   X,
 } from "lucide-react";
-import SupervisorAnalytics from "../supervisor/SupervisorAnalytics1";
+import SupervisorAnalytics from "../supervisor/SupervisorAnalytics";
 
 // Utility functions matching SupervisorAnalytics
 function round1(value) {

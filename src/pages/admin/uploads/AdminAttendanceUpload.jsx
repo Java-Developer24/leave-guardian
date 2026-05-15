@@ -5,6 +5,7 @@ import { useAppStore } from "@/state/store";
 import SectionHeader from "@/components/SectionHeader";
 import { showToast } from "@/components/toasts/ToastContainer";
 import { Upload, FileSpreadsheet, CheckCircle, XCircle } from "lucide-react";
+import { apiService } from "@/services/apiService";
 
 const sampleAttendance = [
   { userId: "u1", date: "2026-03-01", present: true },
@@ -20,7 +21,7 @@ const sampleAttendance = [
 ];
 
 export default function AdminAttendanceUpload() {
-  const { repo, users } = useAppStore();
+  const { users } = useAppStore();
   const [preview, setPreview] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -31,7 +32,7 @@ export default function AdminAttendanceUpload() {
   const handleSave = async () => {
     if (!preview) return;
     setSaving(true);
-    await repo.uploadAttendance(preview);
+    await apiService.uploadAttendance(preview);
     showToast("Attendance saved successfully", "success");
     setPreview(null);
     setSaving(false);
