@@ -5,6 +5,7 @@ import { useAppStore } from "@/state/store";
 import SectionHeader from "@/components/SectionHeader";
 import { showToast } from "@/components/toasts/ToastContainer";
 import Modal from "@/components/modals/Modal";
+import { apiService } from "@/services/apiService";
 import {
   Plus,
   Pencil,
@@ -40,7 +41,7 @@ const typeIcons = {
 };
 
 export default function AdminHolidays() {
-  const { holidays, repo, refreshHolidays } = useAppStore();
+  const { holidays, refreshHolidays } = useAppStore();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyHoliday);
@@ -66,14 +67,17 @@ export default function AdminHolidays() {
       showToast("Name and date are required", "error");
       return;
     }
-    await repo.upsertHoliday({ id: editing?.id ?? `h${Date.now()}`, ...form });
+    await apiService.upsertHoliday({
+      id: editing?.id ?? `h${Date.now()}`,
+      ...form,
+    });
     await refreshHolidays();
     showToast(editing ? "Holiday updated" : "Holiday added", "success");
     setModalOpen(false);
   };
 
   const handleDelete = async (id) => {
-    await repo.deleteHoliday(id);
+    await apiService.deleteHoliday(id);
     await refreshHolidays();
     showToast("Holiday deleted", "info");
   };

@@ -4,16 +4,22 @@ import { pageTransition } from "@/styles/motion";
 import { useAppStore } from "@/state/store";
 import SectionHeader from "@/components/SectionHeader";
 import { showToast } from "@/components/toasts/ToastContainer";
-import { BarChart3, Users, Calendar, Zap, Shield, Target } from "lucide-react";
+import { Zap, Shield, Target, Users, BarChart3, Calendar } from "lucide-react";
+import { apiService } from "@/services/apiService";
 
 export default function AdminShrinkage() {
-  const { rules, repo, refreshRules } = useAppStore();
+  const { rules, refreshRules } = useAppStore();
   const [maxDailyPct, setMaxDailyPct] = useState(rules.maxDailyPct);
   const [maxMonthlyPct, setMaxMonthlyPct] = useState(rules.maxMonthlyPct);
   const [agentMonthlyLeaveCap, setAgentMonthlyLeaveCap] = useState(
     rules.agentMonthlyLeaveCap,
   );
   const [saving, setSaving] = useState(false);
+  const [pageData, setPageData] = useState(null);
+
+  useEffect(() => {
+    apiService.getAdminShrinkageData().then(setPageData);
+  }, []);
 
   useEffect(() => {
     setMaxDailyPct(rules.maxDailyPct);
@@ -23,7 +29,7 @@ export default function AdminShrinkage() {
 
   const handleSave = async () => {
     setSaving(true);
-    await repo.updateRules({
+    await apiService.updateRules({
       maxDailyPct,
       maxMonthlyPct,
       agentMonthlyLeaveCap,
@@ -33,37 +39,15 @@ export default function AdminShrinkage() {
     setSaving(false);
   };
 
-  const fields = [
-    {
-      label: "Max Daily Shrinkage %",
-      desc: "Maximum percentage of team on leave per day",
-      value: maxDailyPct,
-      set: setMaxDailyPct,
-      icon: BarChart3,
-      accent: "primary",
-    },
-    {
-      label: "Max Monthly Shrinkage %",
-      desc: "Monthly shrinkage cap across the department",
-      value: maxMonthlyPct,
-      set: setMaxMonthlyPct,
-      icon: Calendar,
-      accent: "accent",
-    },
-    {
-      label: "Agent Monthly Leave Cap",
-      desc: "Maximum planned leaves per agent per month",
+  if (!pageData) return null;
+
+  const valueMap = {
+    maxDailyPct: { value: maxDailyPct, set: setMaxDailyPct },
+    maxMonthlyPct: { value: maxMonthlyPct, set: setMaxMonthlyPct },
+    agentMonthlyLeaveCap: {
       value: agentMonthlyLeaveCap,
       set: setAgentMonthlyLeaveCap,
-      icon: Users,
-      accent: "info",
     },
-  ];
-
-  const accentColors = {
-    primary: "bg-primary/10 border-primary/15 text-primary",
-    accent: "bg-accent/10 border-accent/15 text-accent",
-    info: "bg-info/10 border-info/15 text-info",
   };
 
   return (
@@ -77,28 +61,31 @@ export default function AdminShrinkage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 glass-card-featured accent-top-card p-8 space-y-7">
-          {fields.map(({ label, desc, value, set, icon: Icon, accent }) => (
-            <div key={label} className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center border ${accentColors[accent]}`}
-                >
-                  <Icon size={18} />
+          {pageData.fields.map(({ key, label, desc, icon: Icon, accent }) => {
+
+            return (
+              <div key={label} className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center border ${pageData.accentColors[accent]}`}
+                  >
+                    <Icon size={18} />
+                  </div>
+                  <label className="block text-xs font-bold font-heading">
+                    {label}
+                  </label>
                 </div>
-                <label className="block text-xs font-bold font-heading">
-                  {label}
-                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={valueMap[key].value}
+                  onChange={(e) => valueMap[key].set(Number(e.target.value))}
+                  className="glass-input text-xl font-bold"
+                />
+                <p className="text-xs text-muted-foreground/50">{desc}</p>
               </div>
-              <input
-                type="number"
-                min={0}
-                value={value}
-                onChange={(e) => set(Number(e.target.value))}
-                className="glass-input text-xl font-bold"
-              />
-              <p className="text-xs text-muted-foreground/50">{desc}</p>
-            </div>
-          ))}
+            );
+          })}
 
           <div className="bg-warning/4 border border-warning/12 rounded-2xl p-5 text-sm text-muted-foreground flex gap-3">
             <Zap size={18} className="text-warning flex-shrink-0 mt-0.5" />

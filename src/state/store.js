@@ -1,8 +1,8 @@
 import { create } from "zustand";
-import { mockRepo } from "@/data/mock/MockRepository";
+import apiService from "@/services/apiService";
 
 export const useAppStore = create((set, get) => ({
-  repo: mockRepo,
+  service: apiService,
   currentUser: null,
   users: [],
   departments: [],
@@ -16,12 +16,10 @@ export const useAppStore = create((set, get) => ({
   attendance: [],
   loading: false,
 
-  setRepo: (repo) => set({ repo }),
-
   login: async (userId) => {
-    const repo = get().repo;
-    const user = await repo.getUser(userId);
-    if (!user) throw new Error("User not found");
+    const service = get().service;
+    const users = await service.getUsers();
+    const user = users.find((u) => u.id === userId);
     set({ currentUser: user });
     await get().loadAll();
   },
@@ -41,7 +39,7 @@ export const useAppStore = create((set, get) => ({
 
   loadAll: async () => {
     set({ loading: true });
-    const repo = get().repo;
+    const service = get().service;
     const [
       users,
       departments,
@@ -54,16 +52,16 @@ export const useAppStore = create((set, get) => ({
       schedule,
       attendance,
     ] = await Promise.all([
-      repo.getUsers(),
-      repo.getDepartments(),
-      repo.getAllLeaves(),
-      repo.getForecastAlerts(),
-      repo.getWeekoffSwapRequests(),
-      repo.getHolidays(),
-      repo.getRules(),
-      repo.getLeaveWindow(),
-      repo.getSchedule(),
-      repo.getAttendance(),
+      service.getUsers(),
+      service.getDepartments(),
+      service.getAllLeaves(),
+      service.getForecastAlerts(),
+      service.getWeekoffSwapRequests(),
+      service.getHolidays(),
+      service.getRules(),
+      service.getLeaveWindow(),
+      service.getSchedule(),
+      service.getAttendance(),
     ]);
     set({
       users,
@@ -81,31 +79,31 @@ export const useAppStore = create((set, get) => ({
   },
 
   refreshLeaves: async () => {
-    const leaves = await get().repo.getAllLeaves();
+    const leaves = await get().service.getAllLeaves();
     set({ leaves });
   },
   refreshForecastAlerts: async () => {
-    const forecastAlerts = await get().repo.getForecastAlerts();
+    const forecastAlerts = await get().service.getForecastAlerts();
     set({ forecastAlerts });
   },
   refreshWeekoffSwapRequests: async () => {
-    const weekoffSwapRequests = await get().repo.getWeekoffSwapRequests();
+    const weekoffSwapRequests = await get().service.getWeekoffSwapRequests();
     set({ weekoffSwapRequests });
   },
   refreshHolidays: async () => {
-    const holidays = await get().repo.getHolidays();
+    const holidays = await get().service.getHolidays();
     set({ holidays });
   },
   refreshRules: async () => {
-    const rules = await get().repo.getRules();
+    const rules = await get().service.getRules();
     set({ rules });
   },
   refreshLeaveWindow: async () => {
-    const leaveWindow = await get().repo.getLeaveWindow();
+    const leaveWindow = await get().service.getLeaveWindow();
     set({ leaveWindow });
   },
   refreshSchedule: async () => {
-    const schedule = await get().repo.getSchedule();
+    const schedule = await get().service.getSchedule();
     set({ schedule });
   },
 }));

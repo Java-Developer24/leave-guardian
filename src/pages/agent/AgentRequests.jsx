@@ -6,10 +6,11 @@ import SectionHeader from "@/components/SectionHeader";
 import StatusChip from "@/components/StatusChip";
 import { formatDate } from "@/core/utils/dates";
 import { showToast } from "@/components/toasts/ToastContainer";
+import { apiService } from "@/services/apiService";
 import { ArrowDownRight, ArrowUpRight, Inbox } from "lucide-react";
 
 export default function AgentRequests() {
-  const { currentUser, leaves, users, repo, refreshLeaves } = useAppStore();
+  const { currentUser, leaves, users, refreshLeaves } = useAppStore();
   const [tab, setTab] = useState("outgoing");
 
   const outgoing = useMemo(
@@ -39,7 +40,7 @@ export default function AgentRequests() {
 
   const handleAccept = async (id) => {
     const leave = leaves.find((l) => l.id === id);
-    await repo.updateLeave(id, {
+    await apiService.updateLeave(id, {
       status: "PendingSupervisor",
       history: [
         ...(leave?.history ?? []),
@@ -55,7 +56,7 @@ export default function AgentRequests() {
   };
   const handleReject = async (id) => {
     const leave = leaves.find((l) => l.id === id);
-    await repo.updateLeave(id, {
+    await apiService.updateLeave(id, {
       status: "Rejected",
       history: [
         ...(leave?.history ?? []),

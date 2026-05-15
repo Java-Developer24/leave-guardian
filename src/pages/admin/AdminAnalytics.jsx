@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { pageTransition, staggerContainer, staggerItem } from "@/styles/motion";
 import { useAppStore } from "@/state/store";
@@ -16,6 +16,7 @@ import {
   Zap,
   Shield,
   Eye,
+  Gauge,
 } from "lucide-react";
 import {
   BarChart,
@@ -35,8 +36,7 @@ import {
   Treemap,
 } from "recharts";
 import { formatDate } from "@/core/utils/dates";
-
-import { useEffect } from "react";
+import { apiService } from "@/services/apiService";
 
 import {
   estimateForecastVolume,
@@ -52,7 +52,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
-  Gauge,
   MessageSquare,
   Send,
   Target,
@@ -145,19 +144,8 @@ function getCalendarDays(monthKey) {
   return days;
 }
 
-function formatShortDate(date) {
-  return parseDate(date).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
-
 function formatMonthInput(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function formatVariance(value) {
-  return `${value > 0 ? "+" : ""}${value}`;
 }
 
 function getOrderedRange(start, end) {
@@ -238,31 +226,10 @@ const tooltipStyle = {
   padding: "8px 12px",
 };
 
-const DEPT_COLORS = [
-  "hsl(356, 98%, 65%)",
-  "hsl(37, 100%, 58%)",
-  "hsl(215, 100%, 58%)",
-  "hsl(152, 69%, 42%)",
-  "hsl(280, 80%, 60%)",
-  "hsl(190, 90%, 50%)",
-  "hsl(45, 100%, 50%)",
-  "hsl(320, 80%, 55%)",
-  "hsl(160, 60%, 45%)",
-  "hsl(10, 90%, 55%)",
-  "hsl(240, 60%, 60%)",
-];
-
-const STATUS_COLORS = {
-  Approved: "hsl(152, 69%, 42%)",
-  Rejected: "hsl(0, 85%, 60%)",
-  PendingSupervisor: "hsl(37, 100%, 58%)",
-  PendingPeer: "hsl(215, 100%, 58%)",
-};
-
 function TreemapContent(props) {
-  const { x, y, width, height, name, value, shrinkage, index } = props;
+  const { x, y, width, height, name, value, colors, index } = props;
   if (width < 8 || height < 8) return null;
-  const color = DEPT_COLORS[index % DEPT_COLORS.length];
+  const color = colors[index % colors.length];
   const shortName = name
     ?.replace("Messaging - ", "M-")
     .replace("Messaging ", "M-");
@@ -331,6 +298,13 @@ export default function AdminAnalytics() {
     attendance,
     weekoffSwapRequests,
   } = useAppStore();
+
+  const [pageData, setPageData] = useState(null);
+
+  useEffect(() => {
+    apiService.getAdminAnalyticsData().then(setPageData);
+  }, []);
+
   const today = useMemo(() => new Date(), []);
   const todayKey = toDateStr(today);
   const previousDay = useMemo(() => {
@@ -348,22 +322,21 @@ export default function AdminAnalytics() {
     new Date(today.getFullYear(), today.getMonth() + 1, 0),
   );
   const [selectedMonthKey, setSelectedMonthKey] = useState(initialMonthKey);
-  const [rangePreset, setRangePreset] = useState(1);
+  const [rangePreset] = useState(1);
   const [forecastMonthKey, setForecastMonthKey] = useState(initialMonthKey);
   const [dateFrom, setDateFrom] = useState(initialDateFrom);
   const [dateTo, setDateTo] = useState(initialDateTo);
-  const [teamRiskFilterMode, setTeamRiskFilterMode] = useState("month");
+  const [teamRiskFilterMode] = useState("month");
   const [teamRiskMonthKey, setTeamRiskMonthKey] = useState(initialMonthKey);
-  const [teamRiskMonthFrom, setTeamRiskMonthFrom] = useState(initialMonthKey);
-  const [teamRiskMonthTo, setTeamRiskMonthTo] = useState(initialMonthKey);
-  const [teamRiskDateFrom, setTeamRiskDateFrom] = useState(initialDateFrom);
-  const [teamRiskDateTo, setTeamRiskDateTo] = useState(initialDateTo);
+  const [teamRiskMonthFrom] = useState(initialMonthKey);
+  const [teamRiskMonthTo] = useState(initialMonthKey);
+  const [teamRiskDateFrom] = useState(initialDateFrom);
+  const [teamRiskDateTo] = useState(initialDateTo);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState([]);
   const [isBotTyping, setIsBotTyping] = useState(false);
   useEffect(() => {
-    if (rangePreset === "custom") return;
     const selectedMonthDate = getMonthStart(selectedMonthKey);
     const rangeStart = addMonths(selectedMonthDate, -(rangePreset - 1));
     setDateFrom(toDateStr(rangeStart));
@@ -471,15 +444,6 @@ export default function AdminAnalytics() {
       const unplannedLeaves = dayLeaves
         .filter((leave) => leave.type === "Unplanned")
         .reduce((total, leave) => total + leave.days, 0);
-      const weekoffSwapCount = deptWeekoffRequests.filter((request) => {
-        const mode = request.mode ?? "WeekSwap";
-        if (mode === "WeekMove") return false;
-        return request.sourceDate === date || request.peerDate === date;
-      }).length;
-      const weekoffMoveCount = deptWeekoffRequests.filter((request) => {
-        const mode = request.mode ?? "WeekSwap";
-        return mode === "WeekMove" && request.peerDate === date;
-      }).length;
       const activeLeaves = approvedLeaves + pendingLeaves;
       const forecastVolume = estimateForecastVolume(date);
       const requiredGuides = estimateRequiredGuides(date);
@@ -516,8 +480,6 @@ export default function AdminAnalytics() {
         shrinkagePct,
         availableGuides,
         forecastedShrinkagePct,
-        weekoffSwapCount,
-        weekoffMoveCount,
         isHighRisk:
           availableGuides < requiredGuides || shrinkagePct >= rules.maxDailyPct,
       };
@@ -557,6 +519,7 @@ export default function AdminAnalytics() {
     () => getMonthKeysBetween(dateFrom, dateTo),
     [dateFrom, dateTo],
   );
+
   const [teamRiskMonthRangeStart, teamRiskMonthRangeEnd] = useMemo(
     () =>
       getOrderedRange(
@@ -565,6 +528,7 @@ export default function AdminAnalytics() {
       ),
     [teamRiskMonthFrom, teamRiskMonthTo, initialMonthKey],
   );
+
   const [teamRiskDateRangeStart, teamRiskDateRangeEnd] = useMemo(
     () =>
       getOrderedRange(
@@ -573,66 +537,7 @@ export default function AdminAnalytics() {
       ),
     [teamRiskDateFrom, teamRiskDateTo, initialDateFrom, initialDateTo],
   );
-  const selectedRangeMonths = useMemo(() => {
-    if (rangePreset === "custom") {
-      return rangeMonthKeys.map((monthKey) => ({
-        key: monthKey,
-        label: formatMonthYear(monthKey),
-      }));
-    }
-    return Array.from({ length: rangePreset }, (_, index) => {
-      const monthDate = addMonths(
-        getMonthStart(selectedMonthKey),
-        -(rangePreset - 1) + index,
-      );
-      const monthKey = formatMonthInput(monthDate);
-      return { key: monthKey, label: formatMonthYear(monthKey) };
-    });
-  }, [rangeMonthKeys, rangePreset, selectedMonthKey]);
-  const teamRiskWindow = useMemo(() => {
-    if (teamRiskFilterMode === "monthRange") {
-      return {
-        dateFrom: toDateStr(getMonthStart(teamRiskMonthRangeStart)),
-        dateTo: toDateStr(getMonthEnd(teamRiskMonthRangeEnd)),
-        label:
-          teamRiskMonthRangeStart === teamRiskMonthRangeEnd
-            ? formatMonthYear(teamRiskMonthRangeStart)
-            : `${formatMonthYear(teamRiskMonthRangeStart)} to ${formatMonthYear(teamRiskMonthRangeEnd)}`,
-        helperLabel: "Month range",
-      };
-    }
-    if (teamRiskFilterMode === "dateRange") {
-      return {
-        dateFrom: teamRiskDateRangeStart,
-        dateTo: teamRiskDateRangeEnd,
-        label:
-          teamRiskDateRangeStart === teamRiskDateRangeEnd
-            ? formatDate(teamRiskDateRangeStart)
-            : `${formatDate(teamRiskDateRangeStart)} to ${formatDate(teamRiskDateRangeEnd)}`,
-        helperLabel: "Custom date range",
-      };
-    }
-    const activeMonthKey = teamRiskMonthKey || initialMonthKey;
-    return {
-      dateFrom: toDateStr(getMonthStart(activeMonthKey)),
-      dateTo: toDateStr(getMonthEnd(activeMonthKey)),
-      label: formatMonthYear(activeMonthKey),
-      helperLabel: "Single month",
-    };
-  }, [
-    teamRiskFilterMode,
-    teamRiskMonthRangeStart,
-    teamRiskMonthRangeEnd,
-    teamRiskDateRangeStart,
-    teamRiskDateRangeEnd,
-    teamRiskMonthKey,
-    initialMonthKey,
-  ]);
-  const teamRiskDescription = useMemo(
-    () =>
-      `Each guide shows approved leaves for ${teamRiskWindow.label}, split by planned and unplanned leave with total leave percentage for the selected period.`,
-    [teamRiskWindow.label],
-  );
+
   const shrinkageSummary = useMemo(() => {
     const totalScheduled = periodMetrics.reduce(
       (total, item) => total + item.scheduledGuides,
@@ -687,15 +592,7 @@ export default function AdminAnalytics() {
       deficitHours: Math.max(0, targetHours - actualHours),
     };
   }, [selectedMonthMetrics]);
-  const currentMonthLeaves = useMemo(
-    () =>
-      deptLeaves.filter(
-        (leave) =>
-          leave.date.startsWith(selectedMonthKey) &&
-          ACTIVE_REQUEST_STATUSES.includes(leave.status),
-      ),
-    [deptLeaves, selectedMonthKey],
-  );
+
   const highRiskRows = useMemo(
     () =>
       selectedMonthMetrics
@@ -707,212 +604,7 @@ export default function AdminAnalytics() {
         ),
     [selectedMonthMetrics],
   );
-  const monthlyAttendanceTrend = useMemo(() => {
-    return rangeMonthKeys.map((monthKey) => {
-      const monthPlanned = schedule.filter(
-        (row) =>
-          teamAgentIds.has(row.userId) &&
-          row.date.startsWith(monthKey) &&
-          row.date >= dateFrom &&
-          row.date <= dateTo &&
-          !row.weekOff,
-      ).length;
-      const monthApprovedLeaves = deptLeaves
-        .filter(
-          (leave) =>
-            leave.date.startsWith(monthKey) &&
-            leave.date >= dateFrom &&
-            leave.date <= dateTo &&
-            leave.status === "Approved",
-        )
-        .reduce((total, leave) => total + leave.days, 0);
-      const approvedLeaveKeys = new Set(
-        deptLeaves
-          .filter(
-            (leave) =>
-              leave.date.startsWith(monthKey) &&
-              leave.date >= dateFrom &&
-              leave.date <= dateTo &&
-              leave.status === "Approved",
-          )
-          .map((leave) => `${leave.requesterId}-${leave.date}`),
-      );
-      const recordedAbsenceDays = deptAttendance.filter(
-        (row) =>
-          !row.present &&
-          row.date.startsWith(monthKey) &&
-          row.date >= dateFrom &&
-          row.date <= dateTo &&
-          !approvedLeaveKeys.has(`${row.userId}-${row.date}`),
-      ).length;
-      const actual = Math.max(
-        0,
-        monthPlanned - monthApprovedLeaves - recordedAbsenceDays,
-      );
-      const variance = actual - monthPlanned;
-      const variancePct =
-        monthPlanned === 0 ? 0 : round1((variance / monthPlanned) * 100);
-      return {
-        monthKey,
-        label: formatMonthYear(monthKey),
-        planned: monthPlanned,
-        actual,
-        variance,
-        variancePct,
-      };
-    });
-  }, [
-    rangeMonthKeys,
-    schedule,
-    teamAgentIds,
-    dateFrom,
-    dateTo,
-    deptLeaves,
-    deptAttendance,
-  ]);
-  const displayMonthlyAttendanceTrend = useMemo(() => {
-    const minimumCards = 3;
-    const displayCount = Math.max(minimumCards, monthlyAttendanceTrend.length);
-    const trendByMonth = new Map(
-      monthlyAttendanceTrend.map((item) => [item.monthKey, item]),
-    );
-    const anchorTrend = monthlyAttendanceTrend.find(
-      (item) => item.planned > 0 || item.actual > 0,
-    ) ?? {
-      monthKey: selectedMonthKey,
-      label: formatMonthYear(selectedMonthKey),
-      planned: Math.max(48, teamAgents.length * 20),
-      actual: Math.max(42, teamAgents.length * 20 - 4),
-      variance: -4,
-      variancePct: -7.5,
-    };
-    return Array.from({ length: displayCount }, (_, index) => {
-      const monthDate = addMonths(
-        getMonthStart(selectedMonthKey),
-        -(displayCount - 1 - index),
-      );
-      const monthKey = formatMonthInput(monthDate);
-      const existing = trendByMonth.get(monthKey);
-      if (existing && (existing.planned > 0 || existing.actual > 0)) {
-        return existing;
-      }
-      const recencyOffset = displayCount - 1 - index;
-      const planned = Math.max(
-        44,
-        anchorTrend.planned - recencyOffset * 4 + (index % 2 === 0 ? 2 : -1),
-      );
-      const actualGap = 2 + (recencyOffset % 3);
-      const actual = Math.max(38, planned - actualGap);
-      const variance = actual - planned;
-      return {
-        monthKey,
-        label: formatMonthYear(monthKey),
-        planned,
-        actual,
-        variance,
-        variancePct: planned === 0 ? 0 : round1((variance / planned) * 100),
-        isReference: true,
-      };
-    });
-  }, [monthlyAttendanceTrend, selectedMonthKey, teamAgents.length]);
-  const attendanceTrendMax = useMemo(
-    () =>
-      Math.max(
-        1,
-        ...displayMonthlyAttendanceTrend.flatMap((item) => [
-          item.planned,
-          item.actual,
-        ]),
-      ),
-    [displayMonthlyAttendanceTrend],
-  );
-  const teamRiskRows = useMemo(() => {
-    return teamAgents
-      .map((agent) => {
-        const agentLeaves = deptLeaves.filter(
-          (leave) =>
-            leave.requesterId === agent.id &&
-            leave.status === "Approved" &&
-            leave.date >= teamRiskWindow.dateFrom &&
-            leave.date <= teamRiskWindow.dateTo,
-        );
-        const planned = agentLeaves
-          .filter((leave) => leave.type === "Planned")
-          .reduce((total, leave) => total + leave.days, 0);
-        const unplanned = agentLeaves
-          .filter((leave) => leave.type === "Unplanned")
-          .reduce((total, leave) => total + leave.days, 0);
-        const approved = planned + unplanned;
-        const scheduledDays = schedule.filter(
-          (row) =>
-            row.userId === agent.id &&
-            row.date >= teamRiskWindow.dateFrom &&
-            row.date <= teamRiskWindow.dateTo &&
-            !row.weekOff,
-        ).length;
-        const leavePct =
-          scheduledDays === 0 ? 0 : round1((approved / scheduledDays) * 100);
-        return {
-          id: agent.id,
-          name: agent.name,
-          approved,
-          planned,
-          unplanned,
-          leavePct,
-          riskLabel:
-            leavePct >= 16 ? "High" : leavePct >= 10 ? "Moderate" : "Low",
-        };
-      })
-      .sort((a, b) => b.leavePct - a.leavePct || b.approved - a.approved);
-  }, [
-    teamAgents,
-    deptLeaves,
-    teamRiskWindow.dateFrom,
-    teamRiskWindow.dateTo,
-    schedule,
-  ]);
-  const riskSpans = useMemo(
-    () =>
-      groupConsecutiveRiskDates(
-        [...highRiskRows].sort((a, b) => a.date.localeCompare(b.date)),
-      ),
-    [highRiskRows],
-  );
-  const weekoffOpportunity = useMemo(() => {
-    for (const riskRow of [...highRiskRows].sort(
-      (a, b) => b.shrinkagePct - a.shrinkagePct,
-    )) {
-      for (const agent of teamAgents) {
-        const riskDay = schedule.find(
-          (row) => row.userId === agent.id && row.date === riskRow.date,
-        );
-        if (!riskDay?.weekOff) continue;
-        for (const candidate of selectedMonthMetrics) {
-          if (candidate.date === riskRow.date) continue;
-          const candidateDay = schedule.find(
-            (row) => row.userId === agent.id && row.date === candidate.date,
-          );
-          if (!candidateDay || candidateDay.weekOff) continue;
-          const availableAfterMove = candidate.availableGuides - 1;
-          if (availableAfterMove >= candidate.requiredGuides) {
-            return {
-              agentName: agent.name,
-              riskDate: riskRow.date,
-              targetDate: candidate.date,
-            };
-          }
-        }
-      }
-    }
-    return null;
-  }, [highRiskRows, teamAgents, schedule, selectedMonthMetrics]);
-  const productionRecommendation = useMemo(() => {
-    const leavesToReduce = Math.ceil(selectedMonthHours.deficitHours / 8);
-    return {
-      leavesToReduce,
-      deficitHours: selectedMonthHours.deficitHours,
-    };
-  }, [selectedMonthHours]);
+
   const performanceCalendarDays = useMemo(
     () => getCalendarDays(selectedMonthKey),
     [selectedMonthKey],
@@ -938,16 +630,9 @@ export default function AdminAnalytics() {
     const next = addMonths(getMonthStart(forecastMonthKey), direction);
     setForecastMonthKey(formatMonthInput(next));
   };
-  const handleTeamRiskMonthStep = (direction) => {
-    const next = addMonths(
-      getMonthStart(teamRiskMonthKey || initialMonthKey),
-      direction,
-    );
-    setTeamRiskMonthKey(formatMonthInput(next));
-  };
 
   const [deptFilter, setDeptFilter] = useState("all");
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm] = useState("");
   const [timeRange, setTimeRange] = useState("all");
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const today = new Date();
@@ -1029,20 +714,28 @@ export default function AdminAnalytics() {
   const statusData = useMemo(
     () =>
       [
-        { name: "Approved", value: approved, fill: STATUS_COLORS.Approved },
-        { name: "Rejected", value: rejected, fill: STATUS_COLORS.Rejected },
+        {
+          name: "Approved",
+          value: approved,
+          fill: pageData?.statusColors?.Approved,
+        },
+        {
+          name: "Rejected",
+          value: rejected,
+          fill: pageData?.statusColors?.Rejected,
+        },
         {
           name: "Pending",
           value: pendingCount,
-          fill: STATUS_COLORS.PendingSupervisor,
+          fill: pageData?.statusColors?.PendingSupervisor,
         },
         {
           name: "Peer Pending",
           value: peerPending,
-          fill: STATUS_COLORS.PendingPeer,
+          fill: pageData?.statusColors?.PendingPeer,
         },
       ].filter((d) => d.value > 0),
-    [approved, rejected, pendingCount, peerPending],
+    [approved, rejected, pendingCount, peerPending, pageData],
   );
 
   const treemapData = useMemo(
@@ -1077,26 +770,6 @@ export default function AdminAnalytics() {
     { month: "March", pct: 9.1, target: rules.maxDailyPct },
   ];
 
-  // Risk dates
-  const riskDates = useMemo(() => {
-    const dateMap = {};
-    filteredLeaves.forEach((l) => {
-      dateMap[l.date] = (dateMap[l.date] || 0) + 1;
-    });
-    return Object.entries(dateMap)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 6)
-      .map(([date, requests]) => ({
-        date: new Date(date).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-        }),
-        requests,
-        severity: requests >= 6 ? "High" : requests >= 3 ? "Moderate" : "Low",
-        desc: `${requests} concurrent requests`,
-      }));
-  }, [filteredLeaves]);
-
   // Dept risk
   const deptRisk = useMemo(
     () =>
@@ -1114,9 +787,9 @@ export default function AdminAnalytics() {
         name: d.dept.replace("Messaging - ", "M-").replace("Messaging ", "M-"),
         leavesPerAgent: d.avgPerAgent,
         shrinkage: d.shrinkage,
-        color: DEPT_COLORS[i % DEPT_COLORS.length],
+        color: pageData?.deptColors[i % pageData?.deptColors.length],
       })),
-    [deptBreakdown],
+    [deptBreakdown, pageData],
   );
 
   const selectedDeptName =
@@ -1124,20 +797,7 @@ export default function AdminAnalytics() {
       ? "All Departments"
       : (departments.find((d) => d.id === deptFilter)?.name ?? "");
 
-  // Supervisor-style calculated metrics for admin day-wise insights
-  const highRiskDepts = useMemo(
-    () => deptBreakdown.filter((d) => d.shrinkage >= rules.maxDailyPct),
-    [deptBreakdown, rules.maxDailyPct],
-  );
   const totalScheduledGuides = useMemo(() => totalAgents * 20, [totalAgents]);
-  const actualHours = useMemo(
-    () => Math.max(0, (totalScheduledGuides - approved) * 8),
-    [totalScheduledGuides, approved],
-  );
-  const targetHours = useMemo(
-    () => totalScheduledGuides * 8,
-    [totalScheduledGuides],
-  );
   const plannedLeaveCount = useMemo(
     () => filteredLeaves.filter((l) => l.type === "Planned").length,
     [filteredLeaves],
@@ -1146,48 +806,7 @@ export default function AdminAnalytics() {
     () => filteredLeaves.filter((l) => l.type === "Unplanned").length,
     [filteredLeaves],
   );
-  const overallShrinkagePct = useMemo(
-    () =>
-      totalScheduledGuides > 0
-        ? Math.round((approved / totalScheduledGuides) * 100 * 10) / 10
-        : 0,
-    [approved, totalScheduledGuides],
-  );
-  const plannedShrinkagePct = useMemo(
-    () =>
-      totalScheduledGuides > 0
-        ? Math.round((plannedLeaveCount / totalScheduledGuides) * 100 * 10) / 10
-        : 0,
-    [plannedLeaveCount, totalScheduledGuides],
-  );
-  const unplannedShrinkagePct = useMemo(
-    () =>
-      totalScheduledGuides > 0
-        ? Math.round((unplannedLeaveCount / totalScheduledGuides) * 100 * 10) /
-          10
-        : 0,
-    [unplannedLeaveCount, totalScheduledGuides],
-  );
 
-  // Recommendations
-  const recommendations = [
-    {
-      title: "Redistribute peak-day leaves",
-      desc: "Multiple dates show 6+ concurrent requests. Recommend staggering.",
-      severity: "high",
-    },
-    {
-      title: "Increase caps for Inbound team",
-      desc: "Inbound department consistently hits monthly cap. Consider raising to 3/agent.",
-      severity: "medium",
-    },
-    {
-      title: "Review cross-department transfers",
-      desc: "High swap/transfer ratio in Outbound. May indicate scheduling issues.",
-      severity: "low",
-    },
-  ];
-  const CHAT_REPLY_DELAY_MS = 250;
   const buildAssistantReply = (userPrompt) => {
     const loweredPrompt = userPrompt.toLowerCase();
 
@@ -1252,6 +871,9 @@ export default function AdminAnalytics() {
       setIsBotTyping(false);
     }, CHAT_REPLY_DELAY_MS);
   };
+
+  if (!pageData) return null;
+
   return (
     <motion.div {...pageTransition}>
       <SectionHeader
@@ -1663,7 +1285,7 @@ export default function AdminAnalytics() {
                       <span
                         className="w-2 h-2 rounded-sm"
                         style={{
-                          background: DEPT_COLORS[i % DEPT_COLORS.length],
+                          background: pageData.deptColors[i % pageData.deptColors.length],
                         }}
                       />
                       {d.name
@@ -1677,7 +1299,7 @@ export default function AdminAnalytics() {
                     data={treemapData}
                     dataKey="size"
                     nameKey="name"
-                    content={<TreemapContent {...{}} />}
+                    content={<TreemapContent {...{ colors: pageData.deptColors }} />}
                     animationDuration={400}
                   />
                 </ResponsiveContainer>
@@ -1837,7 +1459,7 @@ export default function AdminAnalytics() {
                 Recommendations
               </h3>
               <div className="space-y-3">
-                {recommendations.map((rec, i) => (
+                {pageData.recommendations.map((rec, i) => (
                   <div
                     key={i}
                     className="flex items-start justify-between gap-4 p-4 rounded-xl bg-muted/20 border border-border"
@@ -1909,7 +1531,7 @@ export default function AdminAnalytics() {
                             <span
                               className="w-2 h-2 rounded-full flex-shrink-0"
                               style={{
-                                background: DEPT_COLORS[i % DEPT_COLORS.length],
+                                background: pageData.deptColors[i % pageData.deptColors.length],
                               }}
                             />
                             <span className="font-semibold">{d.dept}</span>
@@ -2198,14 +1820,6 @@ export default function AdminAnalytics() {
                                   {item.unplannedLeaves}
                                 </span>
                               </div>
-                              {/* <div className="flex items-center justify-between gap-1">
-                               <span className={subtleTextClass}>Swap</span>
-                               <span className="font-semibold">{item.weekoffSwapCount}</span>
-                              </div>
-                              <div className="flex items-center justify-between gap-1">
-                               <span className={subtleTextClass}>Move</span>
-                               <span className="font-semibold">{item.weekoffMoveCount}</span>
-                              </div> */}
                             </div>
                           </div>
                         </div>

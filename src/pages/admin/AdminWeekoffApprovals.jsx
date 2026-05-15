@@ -11,6 +11,7 @@ import {
   getWeekoffScopeLabel,
 } from "@/core/utils/weekoff";
 import { showToast } from "@/components/toasts/ToastContainer";
+import { apiService } from "@/services/apiService";
 import {
   ArrowLeftRight,
   CheckCircle,
@@ -25,7 +26,6 @@ export default function AdminWeekoffApprovals() {
     currentUser,
     weekoffSwapRequests,
     leaves,
-    repo,
     refreshWeekoffSwapRequests,
     refreshSchedule,
     users,
@@ -123,14 +123,14 @@ export default function AdminWeekoffApprovals() {
 
     try {
       if (reviewAction.action === "approve") {
-        await repo.approveWeekoffSwapRequest(
+        await apiService.approveWeekoffSwapRequest(
           reviewAction.id,
           currentUser.id,
           comment || undefined,
         );
         showToast("Week-off swap approved", "success");
       } else {
-        await repo.rejectWeekoffSwapRequest(
+        await apiService.rejectWeekoffSwapRequest(
           reviewAction.id,
           currentUser.id,
           comment || undefined,

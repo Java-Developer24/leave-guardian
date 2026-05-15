@@ -9,7 +9,7 @@ import {
   seedLeaves,
   seedForecastAlerts,
   seedWeekoffSwapRequests,
-} from "@/data/seeds";
+} from "@/data/personas/personaData";
 import {
   buildForecastAlert,
   buildLeaveSubmissionPreview,

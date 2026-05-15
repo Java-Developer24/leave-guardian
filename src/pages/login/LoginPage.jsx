@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, useInView, animate } from "framer-motion";
 import { useAppStore } from "@/state/store";
 import { ROLE_ROUTES } from "@/core/constants";
-import { seedUsers, seedDepartments } from "@/data/seeds";
+import apiService from "@/services/apiService";
 import {
   ArrowRight,
   Shield,
@@ -12,12 +12,8 @@ import {
   Users,
   Layers,
   TrendingUp,
-  CalendarCheck,
-  BarChart3,
-  Clock4,
-  CheckCircle2,
-  Zap,
   Activity,
+  Zap,
 } from "lucide-react";
 
 // ─── Animated counter ────────────────────────────────────────────────────────
@@ -56,37 +52,41 @@ function FeaturePill({ icon: Icon, label, delay }) {
   );
 }
 
-const statCards = [
-  { value: 103, suffix: "", label: "Guides", icon: Users },
-  { value: 11, suffix: "", label: "Departments", icon: Layers },
-  { value: 99, suffix: "%", label: "Uptime", icon: TrendingUp },
-];
-
-const features = [
-  { icon: CalendarCheck, label: "Smart leave scheduling" },
-  { icon: BarChart3, label: "Real-time shrinkage analytics" },
-  { icon: Clock4, label: "Shift coverage forecasting" },
-  { icon: CheckCircle2, label: "Automated approval workflows" },
-];
-
 export default function LoginPage() {
   const [selectedUser, setSelectedUser] = useState("");
   const [loading, setLoading] = useState(false);
   const [hoveredRole, setHoveredRole] = useState(null);
+  const [pageData, setPageData] = useState(null);
+  const [personas, setPersonas] = useState({ users: [], departments: [] });
+
   const login = useAppStore((s) => s.login);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const [data, personaData] = await Promise.all([
+        apiService.getLoginPageData(),
+        apiService.getPersonas()
+      ]);
+      setPageData(data);
+      setPersonas(personaData);
+    };
+    fetchData();
+  }, []);
 
   const handleLogin = async () => {
     if (!selectedUser) return;
     setLoading(true);
     try {
       await login(selectedUser);
-      const user = seedUsers.find((u) => u.id === selectedUser);
+      const user = personas.users.find((u) => u.id === selectedUser);
       navigate(ROLE_ROUTES[user?.role ?? "agent"]);
     } finally {
       setLoading(false);
     }
   };
+
+  if (!pageData) return null;
 
   return (
     <div className="h-screen flex bg-background relative overflow-hidden">
@@ -116,11 +116,8 @@ export default function LoginPage() {
         />
       </div>
 
-      {/* ══════════════════════════════════════════════════════════════════════
-           LEFT PANEL — redesigned
-        ══════════════════════════════════════════════════════════════════════ */}
+      {/* LEFT PANEL */}
       <div className="hidden lg:flex flex-1 flex-col relative overflow-hidden">
-        {/* Seamless right-edge fade — no hard line between panels */}
         <div
           className="absolute right-0 top-0 bottom-0 w-24 pointer-events-none"
           style={{
@@ -136,7 +133,6 @@ export default function LoginPage() {
           }}
         />
 
-        {/* Large decorative number — editorial accent */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -154,9 +150,7 @@ export default function LoginPage() {
           LSM
         </motion.div>
 
-        {/* Main content */}
         <div className="flex flex-col justify-between h-full px-12 xl:px-16 py-14 relative z-10">
-          {/* Top — logo wordmark */}
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -174,9 +168,7 @@ export default function LoginPage() {
             </span>
           </motion.div>
 
-          {/* Middle — headline block */}
           <div className="max-w-[420px]">
-            {/* Eyebrow */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -189,7 +181,6 @@ export default function LoginPage() {
               </span>
             </motion.div>
 
-            {/* Main heading */}
             <motion.h1
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
@@ -208,7 +199,6 @@ export default function LoginPage() {
               decisions.
             </motion.h1>
 
-            {/* Descriptor */}
             <motion.p
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
@@ -223,9 +213,8 @@ export default function LoginPage() {
               and keep coverage right, without the spreadsheets.
             </motion.p>
 
-            {/* Feature pills */}
             <div className="flex flex-wrap gap-2">
-              {features.map((f, i) => (
+              {pageData.features.map((f, i) => (
                 <FeaturePill
                   key={f.label}
                   icon={f.icon}
@@ -236,13 +225,11 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Bottom — stats row */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.7, ease: [0.16, 1, 0.3, 1] }}
           >
-            {/* Divider with live indicator */}
             <div className="flex items-center gap-4 mb-6">
               <div className="flex items-center gap-1.5">
                 <span className="relative flex h-1.5 w-1.5">
@@ -256,9 +243,8 @@ export default function LoginPage() {
               <div className="flex-1 h-px bg-border/10" />
             </div>
 
-            {/* Stat cards */}
             <div className="grid grid-cols-3 gap-3">
-              {statCards.map((s, i) => (
+              {pageData.stats.map((s, i) => (
                 <motion.div
                   key={s.label}
                   initial={{ opacity: 0, y: 12 }}
@@ -271,14 +257,11 @@ export default function LoginPage() {
                   className="relative group rounded-2xl border border-white/[0.05] bg-white/[0.02]
                              backdrop-blur-sm px-4 py-4 overflow-hidden"
                 >
-                  {/* Hover shimmer */}
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
-
                   <s.icon
                     size={14}
                     className="text-muted-foreground/20 mb-2.5"
                   />
-
                   <div className="text-2xl font-black gradient-text font-heading leading-none tracking-[-0.04em]">
                     <Counter to={s.value} suffix={s.suffix} />
                   </div>
@@ -292,9 +275,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* ══════════════════════════════════════════════════════════════════════
-           RIGHT PANEL — login form (unchanged logic, minor polish)
-        ══════════════════════════════════════════════════════════════════════ */}
+      {/* RIGHT PANEL */}
       <div className="flex-1 flex items-center justify-center p-4 lg:p-10 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20, scale: 0.98 }}
@@ -307,7 +288,6 @@ export default function LoginPage() {
           <div className="relative bg-surface/90 backdrop-blur-3xl rounded-[22px] p-7 border border-border/25">
             <div className="absolute top-0 left-8 right-8 h-[2px] bg-gradient-to-r from-primary via-accent to-info rounded-b-full" />
 
-            {/* Logo */}
             <div className="text-center mb-6 mt-1">
               <motion.div
                 initial={{ scale: 0.85, opacity: 0 }}
@@ -328,7 +308,6 @@ export default function LoginPage() {
               </p>
             </div>
 
-            {/* Quick role buttons */}
             <div className="flex gap-1.5 mb-4">
               {[
                 {
@@ -364,7 +343,7 @@ export default function LoginPage() {
                   onMouseEnter={() => setHoveredRole(r.role)}
                   onMouseLeave={() => setHoveredRole(null)}
                   onClick={() => {
-                    const first = seedUsers.find((u) => u.role === r.role);
+                    const first = personas.users.find((u) => u.role === r.role);
                     if (first) setSelectedUser(first.id);
                   }}
                   className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-lg bg-gradient-to-b ${r.color} border transition-all duration-200 ${hoveredRole === r.role ? "scale-[1.03] shadow-md" : ""}`}
@@ -387,7 +366,7 @@ export default function LoginPage() {
                 >
                   <option value="">Choose a user…</option>
                   <optgroup label="👤 Admins">
-                    {seedUsers
+                    {personas.users
                       .filter((u) => u.role === "admin")
                       .map((u) => (
                         <option key={u.id} value={u.id}>
@@ -396,10 +375,10 @@ export default function LoginPage() {
                       ))}
                   </optgroup>
                   <optgroup label="👥 Supervisors">
-                    {seedUsers
+                    {personas.users
                       .filter((u) => u.role === "supervisor")
                       .map((u) => {
-                        const dept = seedDepartments.find(
+                        const dept = personas.departments.find(
                           (d) => d.id === u.departmentId,
                         );
                         return (
@@ -410,7 +389,7 @@ export default function LoginPage() {
                       })}
                   </optgroup>
                   <optgroup label="📊 Managers">
-                    {seedUsers
+                    {personas.users
                       .filter((u) => u.role === "manager")
                       .map((u) => (
                         <option key={u.id} value={u.id}>
@@ -419,11 +398,11 @@ export default function LoginPage() {
                       ))}
                   </optgroup>
                   <optgroup label="🧑‍💼 Guides (sample)">
-                    {seedUsers
+                    {personas.users
                       .filter((u) => u.role === "agent")
                       .filter((_, i) => i % 10 === 0)
                       .map((u) => {
-                        const dept = seedDepartments.find(
+                        const dept = personas.departments.find(
                           (d) => d.id === u.departmentId,
                         );
                         return (

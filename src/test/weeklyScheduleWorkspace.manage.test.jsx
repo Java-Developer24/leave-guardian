@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import WeeklyScheduleWorkspace from "@/components/schedule/WeeklyScheduleWorkspace";
-import { mockRepo } from "@/data/mock/MockRepository";
+import { apiService } from "@/services/apiService";
 import { useAppStore } from "@/state/store";
 
 async function seedSupervisorStore() {
-  const currentUser = await mockRepo.getUser("sup1");
+  const currentUser = await apiService.getUser("sup1");
   if (!currentUser) throw new Error("Supervisor user not found");
 
   const [
@@ -20,16 +20,16 @@ async function seedSupervisorStore() {
     schedule,
     attendance,
   ] = await Promise.all([
-    mockRepo.getUsers(),
-    mockRepo.getDepartments(),
-    mockRepo.getAllLeaves(),
-    mockRepo.getForecastAlerts(),
-    mockRepo.getWeekoffSwapRequests(),
-    mockRepo.getHolidays(),
-    mockRepo.getRules(),
-    mockRepo.getLeaveWindow(),
-    mockRepo.getSchedule(),
-    mockRepo.getAttendance(),
+    apiService.getUsers(),
+    apiService.getDepartments(),
+    apiService.getAllLeaves(),
+    apiService.getForecastAlerts(),
+    apiService.getWeekoffSwapRequests(),
+    apiService.getHolidays(),
+    apiService.getRules(),
+    apiService.getLeaveWindow(),
+    apiService.getSchedule(),
+    apiService.getAttendance(),
   ]);
 
   useAppStore.setState({

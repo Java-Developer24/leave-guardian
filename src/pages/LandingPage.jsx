@@ -2,28 +2,17 @@ import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import { Link } from "react-router-dom";
 import {
   Calendar,
-  BarChart3,
-  Shield,
-  Users,
   ArrowRight,
   CheckCircle,
   Zap,
   Globe,
   Clock,
-  TrendingUp,
   Star,
-  Layers,
   Activity,
   ArrowUpRight,
-  Fingerprint,
-  LineChart,
-  Bell,
-  Lock,
-  Workflow,
-  Database,
-  Eye,
 } from "lucide-react";
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useMemo } from "react";
+import apiService from "@/services/apiService";
 
 /* ─── Animated counter ─── */
 function Counter({ target, suffix = "" }) {
@@ -139,173 +128,6 @@ function TiltCard({ children, className = "" }) {
   );
 }
 
-const stats = [
-  { value: 10000, suffix: "+", label: "Leaves Managed", icon: Calendar },
-  { value: 99, suffix: ".9%", label: "Platform Uptime", icon: Zap },
-  { value: 500, suffix: "+", label: "Active Teams", icon: Users },
-  { value: 45, suffix: "%", label: "Time Saved", icon: Clock },
-];
-
-const features = [
-  {
-    icon: Calendar,
-    title: "Smart Calendar Engine",
-    description:
-      "AI-powered date blocking with real-time shrinkage calculations. Holidays, weekly offs, and capacity limits — all orchestrated automatically.",
-    accent: "primary",
-    metric: "3x faster",
-    metricLabel: "planning speed",
-    items: [
-      "Auto-block high-shrinkage dates",
-      "Monthly cap enforcement",
-      "Holiday-aware scheduling",
-    ],
-  },
-  {
-    icon: BarChart3,
-    title: "Shrinkage Analytics",
-    description:
-      "Monitor planned vs actual shrinkage with department breakdowns, risk alerts, and predictive trend analysis.",
-    accent: "accent",
-    metric: "99.2%",
-    metricLabel: "accuracy rate",
-    items: [
-      "Real-time dashboards",
-      "Department breakdowns",
-      "Predictive risk alerts",
-    ],
-  },
-  {
-    icon: Shield,
-    title: "Role-Based Workflows",
-    description:
-      "Purpose-built dashboards for every role, from guides to managers. Multi-level approvals, swap requests, and real-time status propagation.",
-    accent: "info",
-    metric: "60%",
-    metricLabel: "fewer escalations",
-    items: [
-      "Guide / Supervisor / Manager / Admin views",
-      "Multi-level approval chains",
-      "Swap & transfer handling",
-    ],
-  },
-];
-
-const roles = [
-  {
-    role: "Agent",
-    desc: "Apply for leave, initiate swaps, track approval status, and manage your personal calendar with quota tracking.",
-    items: [
-      "Apply planned leave",
-      "Swap & transfer requests",
-      "Real-time quota ring",
-      "Leave history timeline",
-    ],
-    color: "primary",
-    icon: Fingerprint,
-  },
-  {
-    role: "Supervisor",
-    desc: "Review pending approvals, monitor team shrinkage impact, and ensure coverage across all shifts.",
-    items: [
-      "One-click approve/reject",
-      "Shrinkage impact gauge",
-      "Team hours dashboard",
-      "Risk date alerts",
-    ],
-    color: "accent",
-    icon: Activity,
-  },
-  {
-    role: "Manager",
-    desc: "Track department and supervisor performance, review forecast risks, and compare team-level schedule visibility before decisions are made.",
-    items: [
-      "Department insights",
-      "Supervisor performance views",
-      "All Departments Schedule visibility",
-      "Forecast review oversight",
-    ],
-    color: "manager",
-    icon: LineChart,
-  },
-  {
-    role: "Admin",
-    desc: "Upload schedules, configure policies, manage holidays, and access organization-wide performance analytics.",
-    items: [
-      "Bulk schedule uploads",
-      "Leave window control",
-      "Shrinkage rule engine",
-      "Department analytics",
-    ],
-    color: "info",
-    icon: Layers,
-  },
-];
-
-const capabilities = [
-  {
-    icon: LineChart,
-    title: "Live Analytics",
-    desc: "Real-time shrinkage monitoring across guide, supervisor, and manager views",
-  },
-  {
-    icon: Bell,
-    title: "Smart Notifications",
-    desc: "Instant status updates across all approval stages",
-  },
-  {
-    icon: Lock,
-    title: "Enterprise Security",
-    desc: "Role-based access control with audit logging",
-  },
-  {
-    icon: Workflow,
-    title: "Automated Workflows",
-    desc: "Multi-level approvals with zero manual overhead",
-  },
-  {
-    icon: Database,
-    title: "Data Integration",
-    desc: "CSV/JSON imports for schedules and attendance",
-  },
-  {
-    icon: Eye,
-    title: "Full Visibility",
-    desc: "Manager and admin dashboards with organization-wide visibility",
-  },
-];
-
-const testimonials = [
-  {
-    name: "Sarah Chen",
-    role: "Operations Director",
-    text: "LSM reduced our leave management overhead by 60%. The shrinkage analytics alone are worth it.",
-    rating: 5,
-    company: "TechServe Inc.",
-  },
-  {
-    name: "James Okafor",
-    role: "Team Lead",
-    text: "The approval workflow is seamless. I can see shrinkage impact before approving — game changer.",
-    rating: 5,
-    company: "GlobalConnect",
-  },
-  {
-    name: "Maya Patel",
-    role: "Manager",
-    text: "The team and department analytics finally give me one place to compare schedules, risks, and supervisor performance.",
-    rating: 5,
-    company: "SupportGrid",
-  },
-  {
-    name: "Priya Mehta",
-    role: "HR Manager",
-    text: "Finally a tool that understands contact center dynamics. Setup took 30 minutes.",
-    rating: 5,
-    company: "VoiceFirst",
-  },
-];
-
 const featureAccentMap = {
   primary: {
     iconBg: "bg-primary/10",
@@ -359,6 +181,16 @@ const roleAccentMap = {
 
 export default function LandingPage() {
   const heroRef = useRef(null);
+  const [pageData, setPageData] = useState(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const data = await apiService.getLandingPageData();
+      setPageData(data);
+    };
+    fetchData();
+  }, []);
+
   const { scrollYProgress } = useScroll({
     target: heroRef,
     offset: ["start start", "end start"],
@@ -366,6 +198,8 @@ export default function LandingPage() {
   const heroY = useTransform(scrollYProgress, [0, 1], [0, 200]);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
   const heroScale = useTransform(scrollYProgress, [0, 0.5], [1, 0.95]);
+
+  if (!pageData) return null;
 
   return (
     <div className="min-h-screen bg-background overflow-hidden relative">
@@ -521,7 +355,7 @@ export default function LandingPage() {
             <div className="w-full h-full rounded-3xl bg-card/95 backdrop-blur-2xl" />
           </div>
           <div className="relative grid grid-cols-2 md:grid-cols-4 gap-8 p-10 md:p-14">
-            {stats.map((s, i) => (
+            {pageData.stats.map((s, i) => (
               <motion.div
                 key={s.label}
                 initial={{ opacity: 0, y: 20 }}
@@ -569,7 +403,7 @@ export default function LandingPage() {
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-          {features.map((f, i) => {
+          {pageData.features.map((f, i) => {
             const a = featureAccentMap[f.accent];
             return (
               <TiltCard key={f.title}>
@@ -642,7 +476,7 @@ export default function LandingPage() {
           </h2>
         </motion.div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {capabilities.map((c, i) => (
+          {pageData.capabilities.map((c, i) => (
             <motion.div
               key={c.title}
               initial={{ opacity: 0, y: 20 }}
@@ -687,7 +521,7 @@ export default function LandingPage() {
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 lg:gap-8">
-          {roles.map((r, i) => {
+          {pageData.roles.map((r, i) => {
             const colors = roleAccentMap[r.color];
             return (
               <motion.div
@@ -743,7 +577,7 @@ export default function LandingPage() {
           </h2>
         </motion.div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-          {testimonials.map((t, i) => (
+          {pageData.testimonials.map((t, i) => (
             <motion.div
               key={t.name}
               initial={{ opacity: 0, y: 30 }}
@@ -822,7 +656,7 @@ export default function LandingPage() {
                   to="/login"
                   className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 px-6 py-4"
                 >
-                  <TrendingUp size={16} /> View Live Demo
+                  <Clock size={16} /> View Live Demo
                 </Link>
               </div>
             </div>

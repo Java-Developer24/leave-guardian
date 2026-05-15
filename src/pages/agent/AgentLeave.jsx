@@ -19,6 +19,7 @@ import { validateReason, validateDateSelection } from "@/core/utils/validation";
 import { showToast } from "@/components/toasts/ToastContainer";
 import { useLiveNow } from "@/hooks/use-live-now";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { apiService } from "@/services/apiService";
 import {
   AlertTriangle,
   CheckCircle,
@@ -73,7 +74,6 @@ export default function AgentLeave() {
     rules,
     leaveWindow,
     schedule,
-    repo,
     refreshLeaves,
     refreshForecastAlerts,
     users,
@@ -90,7 +90,7 @@ export default function AgentLeave() {
   const [reason, setReason] = useState("");
   const [errors, setErrors] = useState([]);
   const [submitting, setSubmitting] = useState(false);
-  const [submissionPreview, setSubmissionPreview] = useState([]);
+  const [, setSubmissionPreview] = useState([]);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [submittedApprovalModalOpen, setSubmittedApprovalModalOpen] =
@@ -288,7 +288,7 @@ export default function AgentLeave() {
       return;
     }
 
-    const preview = await repo.previewLeaveSubmission({
+    const preview = await apiService.previewLeaveSubmission({
       requesterId: currentUser.id,
       departmentId: currentUser.departmentId,
       dates: uniqueDates,
@@ -307,7 +307,7 @@ export default function AgentLeave() {
       const createdLeaves = [];
 
       for (const date of uniqueDates) {
-        const createdLeave = await repo.createLeave({
+        const createdLeave = await apiService.createLeave({
           requesterId: currentUser.id,
           departmentId: currentUser.departmentId,
           type: leaveType,
@@ -351,7 +351,7 @@ export default function AgentLeave() {
 
     setSubmitting(true);
     try {
-      await repo.createLeave({
+      await apiService.createLeave({
         requesterId: currentUser.id,
         departmentId: currentUser.departmentId,
         type: "Swap",

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import WeeklyScheduleWorkspace from "@/components/schedule/WeeklyScheduleWorkspace1";
+import WeeklyScheduleWorkspace from "@/components/schedule/WeeklyScheduleWorkspace";
 import { showToast } from "@/components/toasts/ToastContainer";
 
 export default function AdminSchedule() {
